@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
-import { ProductCard, type Product } from "@/components/products/ProductCard";
-import { formatCondition } from "@/utils/listingHelpers";
+import { ProductCard } from "@/components/products/ProductCard";
+import { formatCondition, type Product } from "@/utils/listingHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

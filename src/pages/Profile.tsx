@@ -1,184 +1,148 @@
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
-import { useParams } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ProductCard } from "@/components/products/ProductCard";
+import { formatCondition, type Product, type Review } from "@/utils/listingHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { ProductCard } from "@/components/products/ProductCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Edit,
-  User,
-  MapPin,
-  Star,
-  Calendar,
-  Package,
-  Mail,
-  Phone,
-  Clock,
-  Loader2,
-} from "lucide-react";
-import { formatCondition, type Product, type Review } from "@/utils/listingHelpers";
+import { Loader2, MapPin, MessageSquare, Star } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface UserProfile {
   id: string;
   username: string;
-  full_name: string;
-  email: string;
-  phone_number: string;
   avatar_url: string | null;
+  full_name: string | null;
   bio: string | null;
   city: string | null;
-  country: string;
   created_at: string;
-  last_seen: string;
-  role: string;
-  is_verified: boolean;
+  listings_count: number;
+  reviews_count: number;
+  average_rating: number;
 }
 
-const cities = [
-  "Casablanca", "Rabat", "Marrakesh", "Fes", "Tangier", "Agadir",
-  "Meknes", "Oujda", "Kenitra", "Tetouan", "Safi", "Mohammedia",
-  "El Jadida", "Taza", "Nador"
-];
-
-const ProfilePage = () => {
+const Profile = () => {
   const { username } = useParams<{ username: string }>();
-  const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
-  
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [activeListings, setActiveListings] = useState<Product[]>([]);
+  const [soldListings, setSoldListings] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [averageRating, setAverageRating] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Form fields
-  const [fullName, setFullName] = useState("");
-  const [bio, setBio] = useState("");
-  const [city, setCity] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  
-  const isOwnProfile = user && profile && user.id === profile.id;
+  const [isCurrentUser, setIsCurrentUser] = useState(false);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchProfile = async () => {
       try {
         // Fetch user profile
-        const { data: userData, error: userError } = await supabase
-          .from("users")
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
           .select("*")
           .eq("username", username)
           .single();
-        
-        if (userError) throw userError;
-        setProfile(userData);
-        
-        // Update form fields if it's the user's own profile
-        setFullName(userData.full_name || "");
-        setBio(userData.bio || "");
-        setCity(userData.city || "");
-        setPhoneNumber(userData.phone_number || "");
-        
-        // Fetch user's active listings
-        const { data: listingsData, error: listingsError } = await supabase
+
+        if (profileError) throw profileError;
+
+        // Get counts and stats
+        const { count: listingsCount } = await supabase
           .from("listings")
-          .select(`
-            id,
-            title,
-            price,
-            condition,
-            city,
-            thumbnail_url,
-            category:category_id(name)
-          `)
-          .eq("user_id", userData.id)
-          .eq("status", "active");
-        
-        if (listingsError) throw listingsError;
-        
-        // Transform to match our Product interface
-        const transformedProducts: Product[] = listingsData.map((listing: any) => ({
-          id: listing.id,
-          title: listing.title,
-          price: listing.price,
-          imageUrl: listing.thumbnail_url || "/placeholder.svg",
-          condition: formatCondition(listing.condition), // Using helper function to ensure correct type
-          location: listing.city,
-          sellerRating: 4.5, // This would be calculated from reviews in a real app
-          category: listing.category?.name || "Unknown",
-        }));
-        
-        setProducts(transformedProducts);
-        
-        // Fetch reviews with explicit column selection
-        const { data: reviewsData, error: reviewsError } = await supabase
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", profileData.id);
+
+        const { count: reviewsCount } = await supabase
           .from("reviews")
-          .select(`
+          .select("*", { count: "exact", head: true })
+          .eq("seller_id", profileData.id);
+
+        const { data: ratingsData } = await supabase
+          .from("reviews")
+          .select("rating")
+          .eq("seller_id", profileData.id);
+
+        const averageRating =
+          ratingsData && ratingsData.length > 0
+            ? ratingsData.reduce((sum: number, item: any) => sum + item.rating, 0) /
+              ratingsData.length
+            : 0;
+
+        setProfile({
+          ...profileData,
+          listings_count: listingsCount || 0,
+          reviews_count: reviewsCount || 0,
+          average_rating: averageRating,
+        });
+
+        // Check if this is the current user's profile
+        if (user && user.id === profileData.id) {
+          setIsCurrentUser(true);
+        }
+
+        // Fetch active listings
+        const { data: activeListingsData } = await supabase
+          .from("listings")
+          .select("*")
+          .eq("user_id", profileData.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
+
+        if (activeListingsData) {
+          const formattedActiveListings: Product[] = activeListingsData.map((listing: any) => ({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price,
+            imageUrl: listing.thumbnail_url || "/placeholder.svg",
+            condition: formatCondition(listing.condition),
+            location: listing.city,
+            sellerRating: averageRating,
+            category: listing.category_id, // This would ideally be the category name
+          }));
+          setActiveListings(formattedActiveListings);
+        }
+
+        // Fetch sold listings
+        const { data: soldListingsData } = await supabase
+          .from("listings")
+          .select("*")
+          .eq("user_id", profileData.id)
+          .eq("status", "sold")
+          .order("updated_at", { ascending: false });
+
+        if (soldListingsData) {
+          const formattedSoldListings: Product[] = soldListingsData.map((listing: any) => ({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price,
+            imageUrl: listing.thumbnail_url || "/placeholder.svg",
+            condition: formatCondition(listing.condition),
+            location: listing.city,
+            sellerRating: averageRating,
+            category: listing.category_id, // This would ideally be the category name
+          }));
+          setSoldListings(formattedSoldListings);
+        }
+
+        // Fetch reviews
+        const { data: reviewsData } = await supabase
+          .from("reviews")
+          .select(
+            `
             id,
             rating,
             comment,
             created_at,
             reviewer:reviewer_id(username, avatar_url),
             listing:listing_id(title, id)
-          `)
-          .eq("reviewed_user_id", userData.id);
-        
-        if (reviewsError) throw reviewsError;
-        
-        // Transform review data to match our Review interface
-        const transformedReviews: Review[] = (reviewsData || []).map((review: any) => {
-          // Handle potential error in reviewer relationship
-          let reviewerData = review.reviewer;
-          if (typeof reviewerData === 'string' || reviewerData instanceof String) {
-            // If reviewer is an error string, provide default values
-            reviewerData = {
-              username: "Unknown User",
-              avatar_url: null
-            };
-          }
-          
-          return {
-            id: review.id,
-            rating: review.rating,
-            comment: review.comment,
-            created_at: review.created_at,
-            reviewer: {
-              username: reviewerData.username || "Unknown User",
-              avatar_url: reviewerData.avatar_url
-            },
-            listing: review.listing || { title: "Unknown Listing", id: "" }
-          };
-        });
-        
-        setReviews(transformedReviews);
-        
-        // Calculate average rating
-        if (reviewsData && reviewsData.length > 0) {
-          const sum = reviewsData.reduce((acc: number, review: any) => acc + review.rating, 0);
-          setAverageRating(Math.round((sum / reviewsData.length) * 10) / 10);
+          `
+          )
+          .eq("seller_id", profileData.id)
+          .order("created_at", { ascending: false });
+
+        if (reviewsData) {
+          setReviews(reviewsData as Review[]);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -186,420 +150,196 @@ const ProfilePage = () => {
         setIsLoading(false);
       }
     };
-    
+
     if (username) {
-      fetchUserProfile();
+      fetchProfile();
     }
-  }, [username]);
-  
-  const handleUpdateProfile = async () => {
-    if (!isOwnProfile || !profile) return;
-    
-    setIsUpdating(true);
-    
-    try {
-      const { error } = await supabase
-        .from("users")
-        .update({
-          full_name: fullName,
-          bio,
-          city,
-          phone_number: phoneNumber,
-        })
-        .eq("id", profile.id);
-      
-      if (error) throw error;
-      
-      // Update the local profile state
-      setProfile({
-        ...profile,
-        full_name: fullName,
-        bio,
-        city,
-        phone_number: phoneNumber,
-      });
-      
-      setIsEditing(false);
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully",
-      });
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Update failed",
-        description: error.message || "Failed to update profile",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-  
+  }, [username, user]);
+
   if (isLoading) {
     return (
       <Layout>
         <div className="container py-8">
           <div className="flex justify-center items-center min-h-[50vh]">
-            <div className="animate-pulse text-lg">Loading profile...</div>
+            <Loader2 className="h-8 w-8 animate-spin text-solidy-blue" />
           </div>
         </div>
       </Layout>
     );
   }
-  
+
   if (!profile) {
     return (
       <Layout>
         <div className="container py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Profile not found</h1>
+            <h1 className="text-2xl font-bold mb-4">User not found</h1>
             <p>The user you're looking for doesn't exist.</p>
           </div>
         </div>
       </Layout>
     );
   }
-  
-  const memberSince = new Date(profile.created_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
-  
-  const lastActive = new Date(profile.last_seen).toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-  });
 
   return (
     <Layout>
       <div className="container py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Info */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader className="text-center">
-                <div className="flex justify-center">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center relative mb-4">
-                    {profile.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.username}
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <User size={48} className="text-gray-400" />
-                    )}
-                    {profile.is_verified && (
-                      <div className="absolute bottom-0 right-0 bg-solidy-blue text-white rounded-full w-6 h-6 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+        {/* Profile Header */}
+        <div className="frosted-glass p-6 rounded-xl mb-8">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <Avatar className="h-24 w-24 border-2 border-solidy-blue">
+              <AvatarImage src={profile.avatar_url || ""} alt={profile.username} />
+              <AvatarFallback className="text-2xl">
+                {profile.username.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-2xl font-bold mb-1">{profile.full_name || profile.username}</h1>
+              <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mb-3">
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span>
+                    {profile.average_rating.toFixed(1)} ({profile.reviews_count} reviews)
+                  </span>
                 </div>
-                <CardTitle className="text-2xl">{profile.username}</CardTitle>
-                <CardDescription>
-                  {profile.role === "seller" ? "Seller" : "Buyer"}
-                  {profile.is_verified && " • Verified"}
-                </CardDescription>
-                
-                {averageRating !== null && (
-                  <div className="flex items-center justify-center mt-2">
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          size={16}
-                          className={`${
-                            star <= Math.round(averageRating)
-                              ? "text-yellow-400 fill-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="ml-2 text-sm">
-                      {averageRating.toFixed(1)} ({reviews.length} reviews)
-                    </span>
+                {profile.city && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{profile.city}</span>
                   </div>
                 )}
+                <Badge variant="outline">Member since {new Date(profile.created_at).getFullYear()}</Badge>
+              </div>
+              {profile.bio && <p className="text-gray-600 dark:text-gray-300 mb-4">{profile.bio}</p>}
 
-                {isOwnProfile && !isEditing && (
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
+              {!isCurrentUser && (
+                <Button className="rounded-full">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Message
+                </Button>
+              )}
+              {isCurrentUser && (
+                <Link to="/dashboard">
+                  <Button variant="outline" className="rounded-full">
                     Edit Profile
                   </Button>
-                )}
-              </CardHeader>
-              
-              <CardContent>
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
-                      <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Your full name"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Phone Number</Label>
-                      <Input
-                        id="phoneNumber"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="Your phone number"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Select
-                        value={city}
-                        onValueChange={setCity}
-                      >
-                        <SelectTrigger id="city">
-                          <SelectValue placeholder="Select your city" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cities.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="Tell others about yourself"
-                        rows={4}
-                      />
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1"
-                        onClick={handleUpdateProfile}
-                        disabled={isUpdating}
-                      >
-                        {isUpdating ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Updating...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setIsEditing(false)}
-                        disabled={isUpdating}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.full_name && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-1">Full Name</h3>
-                        <p>{profile.full_name}</p>
-                      </div>
-                    )}
-                    
-                    {profile.bio && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-1">Bio</h3>
-                        <p className="text-sm">{profile.bio}</p>
-                      </div>
-                    )}
-                    
-                    <div className="pt-4 space-y-3 text-sm">
-                      {profile.city && (
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-500" />
-                          <span>{profile.city}, {profile.country}</span>
-                        </div>
-                      )}
-                      
-                      {isOwnProfile && profile.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-gray-500" />
-                          <span>{profile.email}</span>
-                        </div>
-                      )}
-                      
-                      {(isOwnProfile || profile.phone_number) && profile.phone_number && (
-                        <div className="flex items-center gap-2">
-                          <Phone size={16} className="text-gray-500" />
-                          <span>{profile.phone_number}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-gray-500" />
-                        <span>Member since {memberSince}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-gray-500" />
-                        <span>Last active: {lastActive}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Listings and Reviews */}
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="listings">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="listings" className="text-base">
-                  <Package className="mr-2 h-4 w-4" />
-                  Listings ({products.length})
-                </TabsTrigger>
-                <TabsTrigger value="reviews" className="text-base">
-                  <Star className="mr-2 h-4 w-4" />
-                  Reviews ({reviews.length})
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="listings">
-                {products.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Package className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium">No listings yet</h3>
-                    <p className="mt-2 text-gray-500">
-                      {isOwnProfile
-                        ? "You haven't posted any listings yet."
-                        : `${profile.username} hasn't posted any listings yet.`}
-                    </p>
-                    {isOwnProfile && (
-                      <Button className="mt-4" asChild>
-                        <a href="/post-listing">Post Your First Listing</a>
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {products.map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="reviews">
-                {reviews.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Star className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium">No reviews yet</h3>
-                    <p className="mt-2 text-gray-500">
-                      {isOwnProfile
-                        ? "You haven't received any reviews yet."
-                        : `${profile.username} hasn't received any reviews yet.`}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <Card key={review.id}>
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                                {review.reviewer.avatar_url ? (
-                                  <img
-                                    src={review.reviewer.avatar_url}
-                                    alt={review.reviewer.username}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <User size={20} className="text-gray-500" />
-                                )}
-                              </div>
-                              <div>
-                                <CardTitle className="text-base">{review.reviewer.username}</CardTitle>
-                                <CardDescription>
-                                  {new Date(review.created_at).toLocaleDateString()}
-                                </CardDescription>
-                              </div>
-                            </div>
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  size={14}
-                                  className={`${
-                                    star <= review.rating
-                                      ? "text-yellow-400 fill-yellow-400"
-                                      : "text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-2">
-                          <p className="text-sm">{review.comment}</p>
-                          {review.listing && (
-                            <div className="mt-3 text-xs text-gray-500">
-                              Review for:{" "}
-                              <a
-                                href={`/products/${review.listing.id}`}
-                                className="text-solidy-blue hover:underline"
-                              >
-                                {review.listing.title}
-                              </a>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Tabs for Listings and Reviews */}
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsTrigger value="active">Active Listings ({activeListings.length})</TabsTrigger>
+            <TabsTrigger value="sold">Sold Items ({soldListings.length})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active">
+            {activeListings.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {activeListings.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <h2 className="text-xl font-medium mb-2">No active listings</h2>
+                <p className="text-gray-500 mb-6">
+                  {isCurrentUser
+                    ? "You don't have any active listings yet."
+                    : "This user doesn't have any active listings yet."}
+                </p>
+                {isCurrentUser && (
+                  <Link to="/post-listing">
+                    <Button>Post a Listing</Button>
+                  </Link>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sold">
+            {soldListings.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {soldListings.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <h2 className="text-xl font-medium mb-2">No sold items</h2>
+                <p className="text-gray-500">
+                  {isCurrentUser
+                    ? "You haven't sold any items yet."
+                    : "This user hasn't sold any items yet."}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            {reviews.length > 0 ? (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="frosted-glass p-4 rounded-lg">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={review.reviewer.avatar_url || ""} alt={review.reviewer.username} />
+                          <AvatarFallback>
+                            {review.reviewer.username.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{review.reviewer.username}</div>
+                          <div className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            size={16}
+                            className={`${
+                              i < review.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "fill-gray-200 text-gray-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm mb-2">{review.comment}</p>
+                    <div className="text-xs text-gray-500">
+                      For:{" "}
+                      <Link to={`/products/${review.listing.id}`} className="text-solidy-blue hover:underline">
+                        {review.listing.title}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <h2 className="text-xl font-medium mb-2">No reviews yet</h2>
+                <p className="text-gray-500">
+                  {isCurrentUser
+                    ? "You haven't received any reviews yet."
+                    : "This user hasn't received any reviews yet."}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
 };
 
-export default ProfilePage;
+export default Profile;
