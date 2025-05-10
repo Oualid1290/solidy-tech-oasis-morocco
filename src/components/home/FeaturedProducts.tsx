@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ProductCard, type Product } from "@/components/products/ProductCard";
+import { ProductCard } from "@/components/products/ProductCard";
 import { useLanguage } from "@/context/LanguageContext";
+import { type Product } from "@/utils/listingHelpers";
 
 // Mock data for products
 const mockProducts: Product[] = [

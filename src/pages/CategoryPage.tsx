@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -38,17 +37,6 @@ interface Category {
   name: string;
   slug: string;
   icon_url: string;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  imageUrl: string;
-  condition: "New" | "Used";
-  location: string;
-  sellerRating: number;
-  category: string;
 }
 
 const CategoryPage = () => {
@@ -101,7 +89,7 @@ const CategoryPage = () => {
           title: listing.title,
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
-          condition: formatCondition(listing.condition), // Using the helper function
+          condition: formatCondition(listing.condition), // Using the helper function to ensure correct type
           location: listing.city,
           sellerRating: 4.5, // This would be calculated from reviews in a real app
           category: categoryData.name,

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useParams } from "react-router-dom";
@@ -37,8 +38,7 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import { formatCondition } from "@/utils/listingHelpers";
-import type { Product } from "@/components/products/ProductCard";
+import { formatCondition, type Product, type Review } from "@/utils/listingHelpers";
 
 interface UserProfile {
   id: string;
@@ -54,32 +54,6 @@ interface UserProfile {
   last_seen: string;
   role: string;
   is_verified: boolean;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  imageUrl: string;
-  condition: "New" | "Used";
-  location: string;
-  sellerRating: number;
-  category: string;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  created_at: string;
-  reviewer: {
-    username: string;
-    avatar_url: string | null;
-  };
-  listing: {
-    title: string;
-    id: string;
-  };
 }
 
 const cities = [
@@ -146,12 +120,12 @@ const ProfilePage = () => {
         if (listingsError) throw listingsError;
         
         // Transform to match our Product interface
-        const transformedProducts = listingsData.map((listing: any) => ({
+        const transformedProducts: Product[] = listingsData.map((listing: any) => ({
           id: listing.id,
           title: listing.title,
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
-          condition: listing.condition === "new" ? "New" : "Used", // Explicitly convert to "New" | "Used"
+          condition: formatCondition(listing.condition), // Using helper function to ensure correct type
           location: listing.city,
           sellerRating: 4.5, // This would be calculated from reviews in a real app
           category: listing.category?.name || "Unknown",
@@ -159,7 +133,7 @@ const ProfilePage = () => {
         
         setProducts(transformedProducts);
         
-        // Fetch reviews
+        // Fetch reviews with explicit column selection
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
           .select(`
@@ -173,11 +147,37 @@ const ProfilePage = () => {
           .eq("reviewed_user_id", userData.id);
         
         if (reviewsError) throw reviewsError;
-        setReviews(reviewsData || []);
+        
+        // Transform review data to match our Review interface
+        const transformedReviews: Review[] = (reviewsData || []).map((review: any) => {
+          // Handle potential error in reviewer relationship
+          let reviewerData = review.reviewer;
+          if (typeof reviewerData === 'string' || reviewerData instanceof String) {
+            // If reviewer is an error string, provide default values
+            reviewerData = {
+              username: "Unknown User",
+              avatar_url: null
+            };
+          }
+          
+          return {
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            created_at: review.created_at,
+            reviewer: {
+              username: reviewerData.username || "Unknown User",
+              avatar_url: reviewerData.avatar_url
+            },
+            listing: review.listing || { title: "Unknown Listing", id: "" }
+          };
+        });
+        
+        setReviews(transformedReviews);
         
         // Calculate average rating
         if (reviewsData && reviewsData.length > 0) {
-          const sum = reviewsData.reduce((acc, review) => acc + review.rating, 0);
+          const sum = reviewsData.reduce((acc: number, review: any) => acc + review.rating, 0);
           setAverageRating(Math.round((sum / reviewsData.length) * 10) / 10);
         }
       } catch (error) {

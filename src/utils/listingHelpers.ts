@@ -11,7 +11,7 @@ export const formatCondition = (condition: string): "New" | "Used" => {
 /**
  * Converts display condition value to database format
  * @param condition Display condition ("New" or "Used")
- * @returns Database condition ("new" or "used")
+ * @returns Database condition ("new" | "used")
  */
 export const normalizeCondition = (condition: "New" | "Used"): "new" | "used" => {
   return condition === "New" ? "new" : "used";
@@ -27,4 +27,20 @@ export interface Product {
   location: string;
   sellerRating: number;
   category: string;
+}
+
+// Export interface for Review
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  reviewer: {
+    username: string;
+    avatar_url: string | null;
+  };
+  listing: {
+    title: string;
+    id: string;
+  };
 }
