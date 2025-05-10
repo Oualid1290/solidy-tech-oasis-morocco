@@ -29,6 +29,7 @@ import {
   BarChart2,
   CircleCheck,
   Loader2,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -778,7 +779,7 @@ const Dashboard = () => {
                         to={`/chat/${message.chat_id}`}
                         className="flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-950 -m-4 p-4 transition-colors rounded-lg"
                       >
-                        <div className="flex-shrink-0 h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex items-center justify-center">
+                        <div className="flex-shrink-0 h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           {message.other_user.avatar_url ? (
                             <img
                               src={message.other_user.avatar_url}

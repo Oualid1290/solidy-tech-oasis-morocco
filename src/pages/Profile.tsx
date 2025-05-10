@@ -37,6 +37,8 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
+import { formatCondition } from "@/utils/listingHelpers";
+import type { Product } from "@/components/products/ProductCard";
 
 interface UserProfile {
   id: string;

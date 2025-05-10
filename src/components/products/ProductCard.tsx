@@ -3,20 +3,13 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star } from "lucide-react";
-import { formatCondition } from "@/utils/listingHelpers";
+import { formatCondition, type Product } from "@/utils/listingHelpers";
 
 interface ProductProps {
-  product: {
-    id: string;
-    title: string;
-    price: number;
-    imageUrl: string;
-    condition: "New" | "Used";
-    location: string;
-    sellerRating: number;
-    category: string;
-  };
+  product: Product;
 }
+
+export type { Product };
 
 export const ProductCard = ({ product }: ProductProps) => {
   const { id, title, price, imageUrl, condition, location, sellerRating, category } = product;

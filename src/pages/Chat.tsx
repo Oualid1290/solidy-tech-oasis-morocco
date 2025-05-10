@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +63,19 @@ const ChatPage = () => {
   const [messageText, setMessageText] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Helper function to get other user in a chat
+  const getOtherUser = (chat: Chat) => {
+    if (!user) return null;
+    return chat.buyer.id === user.id ? chat.seller : chat.buyer;
+  };
+
+  // Helper function to select a chat
+  const selectChat = (chat: Chat) => {
+    setCurrentChat(chat);
+    // Update URL without refreshing the page
+    window.history.pushState({}, "", `/chat/${chat.id}`);
+  };
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
@@ -257,29 +269,6 @@ const ChatPage = () => {
       });
     }
   };
-
-  const selectChat = (chat: Chat) => {
-    setCurrentChat(chat);
-    // Update URL without refreshing the page
-    window.history.pushState({}, "", `/chat/${chat.id}`);
-  };
-
-  const getOtherUser = (chat: Chat) => {
-    if (!user) return null;
-    return chat.buyer.id === user.id ? chat.seller : chat.buyer;
-  };
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="container py-8">
-          <div className="flex justify-center items-center min-h-[50vh]">
-            <div className="animate-pulse text-lg">Loading chats...</div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
@@ -527,18 +516,6 @@ const ChatPage = () => {
       </div>
     </Layout>
   );
-  
-  // Helper functions
-  function getOtherUser(chat: Chat) {
-    if (!user) return null;
-    return chat.buyer.id === user.id ? chat.seller : chat.buyer;
-  }
-
-  function selectChat(chat: Chat) {
-    setCurrentChat(chat);
-    // Update URL without refreshing the page
-    window.history.pushState({}, "", `/chat/${chat.id}`);
-  }
 };
 
 export default ChatPage;

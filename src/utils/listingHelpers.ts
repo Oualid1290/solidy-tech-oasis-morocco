@@ -16,3 +16,15 @@ export const formatCondition = (condition: string): "New" | "Used" => {
 export const normalizeCondition = (condition: "New" | "Used"): "new" | "used" => {
   return condition === "New" ? "new" : "used";
 };
+
+// Export type for Product interface that can be reused across the app
+export interface Product {
+  id: string;
+  title: string;
+  price: number;
+  imageUrl: string;
+  condition: "New" | "Used";
+  location: string;
+  sellerRating: number;
+  category: string;
+}

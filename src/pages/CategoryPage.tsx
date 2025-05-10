@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
-import { ProductCard } from "@/components/products/ProductCard";
+import { ProductCard, type Product } from "@/components/products/ProductCard";
+import { formatCondition } from "@/utils/listingHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -95,12 +96,12 @@ const CategoryPage = () => {
         if (listingsError) throw listingsError;
 
         // Transform to match our Product interface
-        const transformedProducts = listingsData.map((listing: any) => ({
+        const transformedProducts: Product[] = listingsData.map((listing: any) => ({
           id: listing.id,
           title: listing.title,
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
-          condition: listing.condition === "new" ? "New" : "Used", // Explicitly convert to "New" | "Used"
+          condition: formatCondition(listing.condition), // Using the helper function
           location: listing.city,
           sellerRating: 4.5, // This would be calculated from reviews in a real app
           category: categoryData.name,
