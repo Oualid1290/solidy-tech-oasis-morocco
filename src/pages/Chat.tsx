@@ -106,18 +106,46 @@ const ChatPage = () => {
           .order("last_message_at", { ascending: false });
 
         if (error) throw error;
-        setChats(data || []);
+        
+        // Process the data to ensure it matches our Chat type
+        const processedChats = (data || []).map((chat: any) => ({
+          id: chat.id,
+          listing: chat.listing || {
+            id: "",
+            title: "Unknown",
+            price: 0,
+            thumbnail_url: null,
+            city: "",
+            created_at: ""
+          },
+          buyer: chat.buyer || {
+            id: "",
+            username: "Unknown",
+            avatar_url: null,
+            last_seen: new Date().toISOString()
+          },
+          seller: chat.seller || {
+            id: "",
+            username: "Unknown", 
+            avatar_url: null,
+            last_seen: new Date().toISOString()
+          },
+          last_message_at: chat.last_message_at || chat.created_at,
+          created_at: chat.created_at
+        }));
+        
+        setChats(processedChats);
         
         // If chatId is provided, find the chat in the list
-        if (chatId && data) {
-          const selected = data.find(chat => chat.id === chatId);
+        if (chatId && processedChats.length > 0) {
+          const selected = processedChats.find(chat => chat.id === chatId);
           if (selected) {
             setCurrentChat(selected);
           }
         }
         // If no chatId is provided but we have chats, select the first one
-        else if (!chatId && data && data.length > 0) {
-          setCurrentChat(data[0]);
+        else if (!chatId && processedChats.length > 0) {
+          setCurrentChat(processedChats[0]);
         }
       } catch (error) {
         console.error("Error fetching chats:", error);
@@ -499,6 +527,18 @@ const ChatPage = () => {
       </div>
     </Layout>
   );
+  
+  // Helper functions
+  function getOtherUser(chat: Chat) {
+    if (!user) return null;
+    return chat.buyer.id === user.id ? chat.seller : chat.buyer;
+  }
+
+  function selectChat(chat: Chat) {
+    setCurrentChat(chat);
+    // Update URL without refreshing the page
+    window.history.pushState({}, "", `/chat/${chat.id}`);
+  }
 };
 
 export default ChatPage;

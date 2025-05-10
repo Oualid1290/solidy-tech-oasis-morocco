@@ -192,13 +192,20 @@ const PostListing = () => {
         thumbnailUrl = publicUrlData.publicUrl;
       }
 
-      // Create the listing
+      // Create the listing with all required fields
       const { data: listingData, error: listingError } = await supabase
         .from("listings")
         .insert({
-          ...data,
+          title: data.title,
+          description: data.description,
+          price: data.price,
+          is_negotiable: data.is_negotiable,
+          category_id: data.category_id,
+          condition: data.condition,
+          city: data.city,
           user_id: user.id,
           thumbnail_url: thumbnailUrl,
+          status: "active" as const
         })
         .select()
         .single();

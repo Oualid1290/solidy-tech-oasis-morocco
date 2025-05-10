@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/context/AuthContext";
@@ -153,7 +152,7 @@ const Dashboard = () => {
         setIsLoadingListings(false);
       }
       
-      // Fetch user's chats and messages
+      // Fetch user's chats and messages with proper column hints
       try {
         setIsLoadingMessages(true);
         
@@ -162,8 +161,8 @@ const Dashboard = () => {
           .select(`
             id,
             listing:listing_id(id, title, thumbnail_url),
-            buyer:buyer_id(username, avatar_url),
-            seller:seller_id(username, avatar_url),
+            buyer_id,
+            seller_id,
             last_message_at
           `)
           .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
@@ -174,8 +173,14 @@ const Dashboard = () => {
         // Process chat data and get last messages
         const processedMessages = await Promise.all(
           (chatsData || []).map(async (chat) => {
-            // Determine the other user
-            const otherUser = chat.buyer.username === user.id ? chat.seller : chat.buyer;
+            // For each chat, fetch the other user's information separately
+            const otherUserId = chat.buyer_id === user.id ? chat.seller_id : chat.buyer_id;
+            
+            const { data: otherUserData } = await supabase
+              .from("users")
+              .select("username, avatar_url")
+              .eq("id", otherUserId)
+              .single();
             
             // Get last message
             const { data: lastMessageData } = await supabase
@@ -196,8 +201,8 @@ const Dashboard = () => {
             
             return {
               chat_id: chat.id,
-              listing: chat.listing,
-              other_user: otherUser,
+              listing: chat.listing || { id: "", title: "Unknown", thumbnail_url: null },
+              other_user: otherUserData || { username: "Unknown", avatar_url: null },
               last_message_text: lastMessageData?.message_text || "",
               last_message_at: lastMessageData?.sent_at || chat.last_message_at,
               unread_count: count || 0,
@@ -280,26 +285,26 @@ const Dashboard = () => {
     fetchData();
   }, [user, updateAction]);
   
-  const handleUpdateListingStatus = async (listingId: string, status: string) => {
+  const handleUpdateListingStatus = async (listingId: string, newStatus: "active" | "sold" | "archived") => {
     try {
       setUpdateAction({ id: listingId, action: 'updating' });
       
       const { error } = await supabase
         .from("listings")
-        .update({ status })
+        .update({ status: newStatus })
         .eq("id", listingId);
       
       if (error) throw error;
       
       toast({
         title: "Status updated",
-        description: `Listing has been marked as ${status}`,
+        description: `Listing has been marked as ${newStatus}`,
       });
       
       // Update local state
       setListings((prev) =>
         prev.map((listing) =>
-          listing.id === listingId ? { ...listing, status: status as any } : listing
+          listing.id === listingId ? { ...listing, status: newStatus } : listing
         )
       );
     } catch (error: any) {

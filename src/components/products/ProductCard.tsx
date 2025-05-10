@@ -1,72 +1,53 @@
 
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MapPin, Star } from "lucide-react";
+import { formatCondition } from "@/utils/listingHelpers";
 
-export interface Product {
-  id: string;
-  title: string;
-  price: number;
-  imageUrl: string;
-  condition: "New" | "Used";
-  location: string;
-  sellerRating: number;
-  category: string;
+interface ProductProps {
+  product: {
+    id: string;
+    title: string;
+    price: number;
+    imageUrl: string;
+    condition: "New" | "Used";
+    location: string;
+    sellerRating: number;
+    category: string;
+  };
 }
 
-interface ProductCardProps {
-  product: Product;
-}
+export const ProductCard = ({ product }: ProductProps) => {
+  const { id, title, price, imageUrl, condition, location, sellerRating, category } = product;
 
-export function ProductCard({ product }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  
   return (
-    <Link 
-      to={`/products/${product.id}`}
-      className="block"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className={`frosted-glass rounded-2xl overflow-hidden transition-all duration-500 ${isHovered ? 'shadow-xl transform -translate-y-1' : 'shadow-md'}`}>
-        <div className="relative aspect-[4/3] overflow-hidden">
-          <img 
-            src={product.imageUrl} 
-            alt={product.title} 
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          />
-          <div className="absolute top-3 left-3 flex gap-2">
-            <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-              product.condition === 'New' 
-                ? 'bg-solidy-mint/90 backdrop-blur-sm text-white' 
-                : 'bg-amber-400/90 backdrop-blur-sm text-white'
-            }`}>
-              {product.condition}
-            </span>
-            <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-solidy-blue/90 backdrop-blur-sm text-white">
-              {product.category}
-            </span>
-          </div>
+    <Link to={`/products/${id}`}>
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-md group">
+        <div className="aspect-square overflow-hidden relative">
+          <img src={imageUrl} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <Badge className="absolute top-2 right-2 bg-solidy-blue">
+            {condition}
+          </Badge>
         </div>
-        <div className="p-5">
-          <h3 className="font-medium text-base line-clamp-1 mb-1 transition-colors">
-            {product.title}
-          </h3>
-          <p className="text-lg font-semibold text-solidy-blue mb-3">
-            {product.price.toLocaleString()} MAD
-          </p>
-          <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <MapPin size={14} />
-              <span className="text-xs">{product.location}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star size={14} className="fill-amber-400 text-amber-400" />
-              <span className="text-xs">{product.sellerRating.toFixed(1)}</span>
-            </div>
+        <CardContent className="pt-3 pb-1">
+          <h3 className="font-medium truncate">{title}</h3>
+          <p className="text-lg font-semibold text-solidy-blue">{price.toLocaleString()} MAD</p>
+          <div className="text-xs text-gray-500 flex items-center gap-1">
+            <MapPin size={12} />
+            <span>{location}</span>
           </div>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="pt-0 pb-3 flex justify-between items-center">
+          <Badge variant="outline" className="font-normal">
+            {category}
+          </Badge>
+          <div className="flex items-center gap-1">
+            <Star size={14} className="fill-yellow-400 text-yellow-400" />
+            <span className="text-xs">{sellerRating}</span>
+          </div>
+        </CardFooter>
+      </Card>
     </Link>
   );
-}
+};

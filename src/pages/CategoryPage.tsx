@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -99,7 +100,7 @@ const CategoryPage = () => {
           title: listing.title,
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
-          condition: listing.condition === "new" ? "New" : "Used",
+          condition: listing.condition === "new" ? "New" : "Used", // Explicitly convert to "New" | "Used"
           location: listing.city,
           sellerRating: 4.5, // This would be calculated from reviews in a real app
           category: categoryData.name,
