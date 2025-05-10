@@ -20,7 +20,7 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'sans-serif'],
+				sans: ['Inter var', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -67,26 +67,26 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				solidy: {
-					blue: '#4A9DFF',
+					blue: '#007AFF', // Apple blue
 					'blue-light': '#E6F0FF',
-					mint: '#A3E4D7',
+					mint: '#00BFA5',
 					'mint-light': '#F2FCE2',
-					accent: '#F97316',
+					accent: '#FF9500', // Apple orange
 				}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				md: 'calc(var(--radius) - 0.25rem)',
+				sm: 'calc(var(--radius) - 0.5rem)'
 			},
 			keyframes: {
 				"accordion-down": {
-					from: { height: "0" },
-					to: { height: "var(--radix-accordion-content-height)" },
+					from: { height: "0", opacity: "0" },
+					to: { height: "var(--radix-accordion-content-height)", opacity: "1" }
 				},
 				"accordion-up": {
-					from: { height: "var(--radix-accordion-content-height)" },
-					to: { height: "0" },
+					from: { height: "var(--radix-accordion-content-height)", opacity: "1" },
+					to: { height: "0", opacity: "0" }
 				},
 				"fade-in": {
 					"0%": {
@@ -134,15 +134,24 @@ export default {
 						transform: "translateY(-5px)",
 					},
 				},
+				"pulse-glow": {
+					"0%, 100%": {
+						boxShadow: "0 0 0 0 rgba(0, 122, 255, 0.6)"
+					},
+					"50%": {
+						boxShadow: "0 0 0 8px rgba(0, 122, 255, 0)"
+					}
+				}
 			},
 			animation: {
 				"accordion-down": "accordion-down 0.2s ease-out",
 				"accordion-up": "accordion-up 0.2s ease-out",
-				"fade-in": "fade-in 0.3s ease-out",
-				"fade-out": "fade-out 0.3s ease-out",
-				"scale-in": "scale-in 0.25s ease-out",
-				"slide-in": "slide-in 0.3s ease-out",
+				"fade-in": "fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+				"fade-out": "fade-out 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+				"scale-in": "scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+				"slide-in": "slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
 				"floating": "floating 3s ease-in-out infinite",
+				"pulse-glow": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
 			}
 		}
 	},
