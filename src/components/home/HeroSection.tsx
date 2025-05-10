@@ -2,6 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
 import { Search, MapPin } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const content = {
   en: {
@@ -30,10 +32,39 @@ const content = {
   }
 };
 
+const cities = [
+  "Casablanca",
+  "Rabat",
+  "Marrakech",
+  "Fes",
+  "Tangier",
+  "Agadir",
+  "Meknes",
+  "Oujda",
+  "Kenitra",
+  "Tetouan"
+];
+
 export function HeroSection() {
   const { language } = useLanguage();
   const t = content[language as keyof typeof content];
   const isRtl = language === "ar";
+  const navigate = useNavigate();
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
+  
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.append("q", searchQuery.trim());
+    }
+    if (selectedLocation) {
+      params.append("location", selectedLocation);
+    }
+    
+    navigate(`/search?${params.toString()}`);
+  };
   
   return (
     <section className={`relative bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pt-28 pb-20 overflow-hidden ${isRtl ? 'text-right' : 'text-left'}`}>
@@ -58,6 +89,9 @@ export function HeroSection() {
                   type="text"
                   placeholder={t.searchPlaceholder}
                   className="w-full pl-12 pr-4 py-3 bg-transparent focus:outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
               
@@ -65,17 +99,21 @@ export function HeroSection() {
                 <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <select
                   className="w-full pl-12 pr-4 py-3 bg-transparent focus:outline-none appearance-none cursor-pointer"
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
                 >
                   <option value="">{t.locationPlaceholder}</option>
-                  <option value="casablanca">Casablanca</option>
-                  <option value="rabat">Rabat</option>
-                  <option value="marrakech">Marrakech</option>
-                  <option value="fes">Fes</option>
-                  <option value="tangier">Tangier</option>
+                  {cities.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
                 </select>
               </div>
               
-              <Button size="lg" className="bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity px-8">
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity px-8"
+                onClick={handleSearch}
+              >
                 {t.searchButton}
               </Button>
             </div>
@@ -83,11 +121,11 @@ export function HeroSection() {
             <div className="mt-8">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t.categories}</p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="rounded-full">GPUs</Button>
-                <Button variant="outline" size="sm" className="rounded-full">CPUs</Button>
-                <Button variant="outline" size="sm" className="rounded-full">RAM</Button>
-                <Button variant="outline" size="sm" className="rounded-full">Motherboards</Button>
-                <Button variant="outline" size="sm" className="rounded-full">Storage</Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/gpus')}>GPUs</Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/cpus')}>CPUs</Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/ram')}>RAM</Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/motherboards')}>Motherboards</Button>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/storage')}>Storage</Button>
               </div>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -40,7 +41,7 @@ const Profile = () => {
       try {
         // Fetch user profile
         const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
+          .from("users")
           .select("*")
           .eq("username", username)
           .single();
@@ -56,12 +57,12 @@ const Profile = () => {
         const { count: reviewsCount } = await supabase
           .from("reviews")
           .select("*", { count: "exact", head: true })
-          .eq("seller_id", profileData.id);
+          .eq("reviewed_user_id", profileData.id);
 
         const { data: ratingsData } = await supabase
           .from("reviews")
           .select("rating")
-          .eq("seller_id", profileData.id);
+          .eq("reviewed_user_id", profileData.id);
 
         const averageRating =
           ratingsData && ratingsData.length > 0
@@ -125,24 +126,47 @@ const Profile = () => {
           setSoldListings(formattedSoldListings);
         }
 
-        // Fetch reviews
+        // Fetch reviews with proper query to avoid join issues
         const { data: reviewsData } = await supabase
           .from("reviews")
-          .select(
-            `
+          .select(`
             id,
             rating,
             comment,
             created_at,
-            reviewer:reviewer_id(username, avatar_url),
-            listing:listing_id(title, id)
-          `
-          )
-          .eq("seller_id", profileData.id)
+            reviewer_id,
+            listing_id
+          `)
+          .eq("reviewed_user_id", profileData.id)
           .order("created_at", { ascending: false });
 
         if (reviewsData) {
-          setReviews(reviewsData as Review[]);
+          // Fetch reviewer details separately to avoid join errors
+          const reviewsWithDetails = await Promise.all(
+            reviewsData.map(async (review) => {
+              // Get reviewer info
+              const { data: reviewerData } = await supabase
+                .from("users")
+                .select("username, avatar_url")
+                .eq("id", review.reviewer_id)
+                .single();
+
+              // Get listing info
+              const { data: listingData } = await supabase
+                .from("listings")
+                .select("title, id")
+                .eq("id", review.listing_id)
+                .single();
+
+              return {
+                ...review,
+                reviewer: reviewerData || { username: "Unknown User", avatar_url: null },
+                listing: listingData || { title: "Unknown Listing", id: review.listing_id },
+              };
+            })
+          );
+
+          setReviews(reviewsWithDetails as Review[]);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
