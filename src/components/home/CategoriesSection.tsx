@@ -1,5 +1,5 @@
 
-import { Cpu, HardDrive, Memory, MonitorSmartphone, Tv2, Keyboard, Fan } from "lucide-react";
+import { Cpu, HardDrive, MemoryStick, MonitorSmartphone, Tv2, Keyboard, Fan } from "lucide-react";
 import { CategoryCard } from "@/components/products/CategoryCard";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -37,7 +37,7 @@ const categories = [
   },
   {
     title: "Memory",
-    icon: Memory,
+    icon: MemoryStick,
     count: 310,
     slug: "memory",
     gradientFrom: "from-purple-500",
