@@ -38,6 +38,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Update user's last_seen in database
+        if (session?.user) {
+          updateLastSeen(session.user.id).catch(console.error);
+        }
       }
     );
 
@@ -47,10 +52,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      
+      // Update user's last_seen in database
+      if (session?.user) {
+        updateLastSeen(session.user.id).catch(console.error);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+  
+  // Function to update the user's last_seen timestamp
+  const updateLastSeen = async (userId: string) => {
+    try {
+      await supabase
+        .from("users")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("id", userId);
+    } catch (error) {
+      console.error("Error updating last_seen:", error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
