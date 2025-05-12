@@ -34,6 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Got existing session:", session);
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -58,6 +60,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) throw error;
+      
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in.",
+      });
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -82,9 +89,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      // If no error, we create the user profile in the users table
-      // Note: This will work due to the Supabase trigger we set up
-      
       toast({
         title: "Account created",
         description: "Please check your email to verify your account.",
@@ -102,6 +106,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      toast({
+        title: "Signed out",
+        description: "You've been successfully signed out.",
+      });
     } catch (error: any) {
       toast({
         title: "Sign out failed",

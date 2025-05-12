@@ -2,19 +2,25 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
 const Auth = () => {
-  const { isAuthenticated, signIn, signUp } = useAuth();
+  const { isAuthenticated, signIn, signUp, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get("signup") === "true" ? "register" : "login";
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -39,6 +45,7 @@ const Auth = () => {
       await signIn(loginEmail, loginPassword);
     } catch (error) {
       // Error is handled in the auth context
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -60,9 +67,15 @@ const Auth = () => {
 
     try {
       await signUp(registerEmail, registerPassword, username);
-      setActiveTab("login");
+      setShowSuccessDialog(true);
+      // Reset the form
+      setRegisterEmail("");
+      setRegisterPassword("");
+      setConfirmPassword("");
+      setUsername("");
     } catch (error) {
       // Error is handled in the auth context
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +117,7 @@ const Auth = () => {
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -116,12 +130,20 @@ const Auth = () => {
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Signing in..." : "Sign In"}
+                    <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
                     </Button>
                   </CardFooter>
                 </form>
@@ -146,6 +168,7 @@ const Auth = () => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -157,6 +180,7 @@ const Auth = () => {
                         value={registerEmail}
                         onChange={(e) => setRegisterEmail(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -167,6 +191,8 @@ const Auth = () => {
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
                         required
+                        disabled={isLoading}
+                        minLength={6}
                       />
                     </div>
                     <div className="space-y-2">
@@ -177,18 +203,43 @@ const Auth = () => {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
+                        disabled={isLoading}
+                        minLength={6}
                       />
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Creating Account..." : "Create Account"}
+                    <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating Account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
                     </Button>
                   </CardFooter>
                 </form>
               </Card>
             </TabsContent>
           </Tabs>
+          
+          {/* Success Dialog */}
+          <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+            <DialogContent>
+              <DialogTitle>Account Created Successfully</DialogTitle>
+              <DialogDescription>
+                Your account has been created. You can now sign in with your credentials.
+              </DialogDescription>
+              <Button onClick={() => {
+                setShowSuccessDialog(false);
+                setActiveTab("login");
+              }}>
+                Go to Login
+              </Button>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </Layout>
