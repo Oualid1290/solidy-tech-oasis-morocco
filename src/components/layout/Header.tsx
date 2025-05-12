@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, Search, User, ShoppingCart, X } from "lucide-react";
+import { Menu, Search, User, ShoppingCart, X, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 
 const content = {
   en: {
@@ -18,6 +19,8 @@ const content = {
     searchPlaceholder: "Search for hardware...",
     login: "Login",
     signup: "Sign Up",
+    dashboard: "Dashboard",
+    profile: "Profile",
   },
   fr: {
     home: "Accueil",
@@ -28,6 +31,8 @@ const content = {
     searchPlaceholder: "Rechercher du matériel...",
     login: "Se connecter",
     signup: "S'inscrire",
+    dashboard: "Tableau de bord",
+    profile: "Profil",
   },
   ar: {
     home: "الرئيسية",
@@ -38,13 +43,17 @@ const content = {
     searchPlaceholder: "البحث عن الأجهزة...",
     login: "تسجيل الدخول",
     signup: "التسجيل",
+    dashboard: "لوحة التحكم",
+    profile: "الملف الشخصي",
   }
 };
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { language } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
   const t = content[language as keyof typeof content];
 
   useEffect(() => {
@@ -61,6 +70,13 @@ export function Header() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+    }
+  };
 
   return (
     <header className={cn(
@@ -79,31 +95,61 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/" className="font-medium hover:text-solidy-blue transition-colors">{t.home}</Link>
-          <Link to="/products" className="font-medium hover:text-solidy-blue transition-colors">{t.products}</Link>
-          <Link to="/sell" className="font-medium hover:text-solidy-blue transition-colors">{t.sell}</Link>
+          <Link to="/products/category/all" className="font-medium hover:text-solidy-blue transition-colors">{t.products}</Link>
+          <Link to="/post-listing" className="font-medium hover:text-solidy-blue transition-colors">{t.sell}</Link>
           <Link to="/about" className="font-medium hover:text-solidy-blue transition-colors">{t.about}</Link>
           <Link to="/contact" className="font-medium hover:text-solidy-blue transition-colors">{t.contact}</Link>
         </nav>
 
         {/* Search, Theme Toggle, and Auth Buttons */}
         <div className="hidden md:flex items-center gap-4">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder={t.searchPlaceholder}
               className="pl-10 pr-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-solidy-blue w-60"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+          </form>
           <ThemeToggle />
           <LanguageSwitcher />
-          <Button variant="ghost" size="sm" className="rounded-full flex gap-1">
-            <User size={18} />
-            <span>{t.login}</span>
-          </Button>
-          <Button size="sm" className="rounded-full bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity">
-            {t.signup}
-          </Button>
+          
+          {isAuthenticated ? (
+            <>
+              <Button variant="ghost" size="sm" className="rounded-full" asChild>
+                <Link to="/dashboard">
+                  <LayoutDashboard size={18} className="mr-1" />
+                  <span>{t.dashboard}</span>
+                </Link>
+              </Button>
+              <Button size="sm" className="rounded-full" asChild>
+                <Link to={`/profile/${user?.id}`}>
+                  <User size={18} className="mr-1" />
+                  <span>{t.profile}</span>
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="rounded-full" asChild>
+                <Link to="/auth">
+                  <User size={18} className="mr-1" />
+                  <span>{t.login}</span>
+                </Link>
+              </Button>
+              <Button 
+                size="sm" 
+                className="rounded-full bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity"
+                asChild
+              >
+                <Link to="/auth?signup=true">
+                  {t.signup}
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -120,32 +166,55 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 top-16 bg-white dark:bg-gray-900 p-6 z-40 animate-slide-in md:hidden">
           <div className="flex flex-col gap-6">
-            <div className="relative mb-6">
+            <form onSubmit={handleSearch} className="relative mb-6">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder={t.searchPlaceholder}
                 className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-solidy-blue"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
             
             <nav className="flex flex-col gap-6">
               <Link to="/" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.home}</Link>
-              <Link to="/products" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.products}</Link>
-              <Link to="/sell" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.sell}</Link>
+              <Link to="/products/category/all" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.products}</Link>
+              <Link to="/post-listing" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.sell}</Link>
               <Link to="/about" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.about}</Link>
               <Link to="/contact" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.contact}</Link>
+              
+              {isAuthenticated && (
+                <>
+                  <Link to="/dashboard" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
+                    {t.dashboard}
+                  </Link>
+                  <Link to={`/profile/${user?.id}`} className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
+                    {t.profile}
+                  </Link>
+                </>
+              )}
             </nav>
             
-            <div className="mt-4 flex flex-col gap-4">
-              <Button variant="outline" size="lg" className="rounded-full w-full">
-                <User size={18} className="mr-2" />
-                {t.login}
-              </Button>
-              <Button size="lg" className="rounded-full w-full bg-gradient-to-r from-solidy-blue to-solidy-mint">
-                {t.signup}
-              </Button>
-            </div>
+            {!isAuthenticated && (
+              <div className="mt-4 flex flex-col gap-4">
+                <Button variant="outline" size="lg" className="rounded-full w-full" asChild>
+                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                    <User size={18} className="mr-2" />
+                    {t.login}
+                  </Link>
+                </Button>
+                <Button 
+                  size="lg" 
+                  className="rounded-full w-full bg-gradient-to-r from-solidy-blue to-solidy-mint"
+                  asChild
+                >
+                  <Link to="/auth?signup=true" onClick={() => setMobileMenuOpen(false)}>
+                    {t.signup}
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

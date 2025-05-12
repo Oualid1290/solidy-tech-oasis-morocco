@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/products/ProductCard";
 import { useLanguage } from "@/context/LanguageContext";
 import { type Product } from "@/utils/listingHelpers";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { ArrowRight } from "lucide-react";
 
 // Mock data for products
 const mockProducts: Product[] = [
@@ -53,29 +56,43 @@ const content = {
   en: {
     title: "Featured Products",
     subtitle: "Explore the latest hardware listings from our verified sellers",
-    viewAll: "View All Products"
+    viewAll: "View All Products",
+    sellYour: "Sell Your Hardware",
+    viewDashboard: "View Your Dashboard"
   },
   fr: {
     title: "Produits en Vedette",
     subtitle: "Explorez les dernières annonces de matériel de nos vendeurs vérifiés",
-    viewAll: "Voir Tous les Produits"
+    viewAll: "Voir Tous les Produits",
+    sellYour: "Vendez Votre Matériel",
+    viewDashboard: "Voir Votre Tableau de Bord"
   },
   ar: {
     title: "المنتجات المميزة",
     subtitle: "استكشف أحدث قوائم الأجهزة من البائعين المعتمدين لدينا",
-    viewAll: "عرض جميع المنتجات"
+    viewAll: "عرض جميع المنتجات",
+    sellYour: "بيع الأجهزة الخاصة بك",
+    viewDashboard: "عرض لوحة التحكم الخاصة بك"
   }
 };
 
 export function FeaturedProducts() {
   const { language } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const t = content[language as keyof typeof content];
   const isRtl = language === "ar";
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Simulate fetching products
-    setProducts(mockProducts);
+    // Simulate loading state for 500ms
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setProducts(mockProducts);
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
   
   return (
@@ -86,18 +103,67 @@ export function FeaturedProducts() {
             <h2 className="text-3xl font-bold mb-2">{t.title}</h2>
             <p className="text-gray-600 dark:text-gray-300">{t.subtitle}</p>
           </div>
-          <Button variant="outline" className="mt-4 md:mt-0 rounded-full">
-            {t.viewAll}
-          </Button>
+          <div className="flex gap-4 mt-4 md:mt-0">
+            <Button variant="outline" className="rounded-full" asChild>
+              <Link to="/products/category/all">
+                {t.viewAll} <ArrowRight size={16} className="ml-1" />
+              </Link>
+            </Button>
+            
+            {isAuthenticated ? (
+              <Button 
+                className="rounded-full bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity"
+                asChild
+              >
+                <Link to="/post-listing">{t.sellYour}</Link>
+              </Button>
+            ) : (
+              <Button 
+                className="rounded-full bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity"
+                asChild
+              >
+                <Link to="/auth?signup=true">{t.sellYour}</Link>
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <div key={product.id} className="animate-scale-in">
-              <ProductCard product={product} />
-            </div>
-          ))}
+          {isLoading ? (
+            // Skeleton loading states
+            Array(4).fill(0).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-200 dark:bg-gray-700 h-48 rounded-lg mb-3"></div>
+                <div className="bg-gray-200 dark:bg-gray-700 h-4 w-2/3 rounded mb-2"></div>
+                <div className="bg-gray-200 dark:bg-gray-700 h-4 w-1/3 rounded mb-2"></div>
+                <div className="bg-gray-200 dark:bg-gray-700 h-4 w-1/2 rounded"></div>
+              </div>
+            ))
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="animate-scale-in">
+                <Link to={`/products/${product.id}`} className="block h-full transition-transform hover:-translate-y-1 duration-200">
+                  <ProductCard product={product} />
+                </Link>
+              </div>
+            ))
+          )}
         </div>
+        
+        {isAuthenticated && (
+          <div className="mt-12 text-center">
+            <Button 
+              variant="outline"
+              size="lg"
+              className="rounded-full"
+              asChild
+            >
+              <Link to="/dashboard">
+                {t.viewDashboard} <ArrowRight size={16} className="ml-1" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

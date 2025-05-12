@@ -1,9 +1,10 @@
 
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const content = {
   en: {
@@ -12,7 +13,11 @@ const content = {
     searchPlaceholder: "What are you looking for?",
     locationPlaceholder: "Select your city",
     searchButton: "Search",
-    categories: "Browse Categories"
+    categories: "Browse Categories",
+    sellNow: "Sell Your Hardware",
+    viewDashboard: "View Dashboard",
+    signUpToSell: "Sign Up to Sell",
+    topCategories: "Top Categories"
   },
   fr: {
     title: "L'avenir du commerce de matériel au Maroc",
@@ -20,7 +25,11 @@ const content = {
     searchPlaceholder: "Que cherchez-vous ?",
     locationPlaceholder: "Sélectionnez votre ville",
     searchButton: "Rechercher",
-    categories: "Parcourir les catégories"
+    categories: "Parcourir les catégories",
+    sellNow: "Vendez Votre Matériel",
+    viewDashboard: "Voir le Tableau de Bord",
+    signUpToSell: "Inscrivez-vous pour vendre",
+    topCategories: "Catégories Principales"
   },
   ar: {
     title: "مستقبل تجارة الأجهزة في المغرب",
@@ -28,7 +37,11 @@ const content = {
     searchPlaceholder: "عما تبحث؟",
     locationPlaceholder: "اختر مدينتك",
     searchButton: "بحث",
-    categories: "تصفح الفئات"
+    categories: "تصفح الفئات",
+    sellNow: "بيع الأجهزة الخاصة بك",
+    viewDashboard: "عرض لوحة التحكم",
+    signUpToSell: "سجل للبيع",
+    topCategories: "أهم الفئات"
   }
 };
 
@@ -45,8 +58,17 @@ const cities = [
   "Tetouan"
 ];
 
+const topCategories = [
+  { name: "GPUs", slug: "gpus", icon: "💻" },
+  { name: "CPUs", slug: "cpus", icon: "🔧" },
+  { name: "RAM", slug: "ram", icon: "⚡" },
+  { name: "Motherboards", slug: "motherboards", icon: "🛠️" },
+  { name: "Storage", slug: "storage", icon: "💾" }
+];
+
 export function HeroSection() {
   const { language } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const t = content[language as keyof typeof content];
   const isRtl = language === "ar";
   const navigate = useNavigate();
@@ -119,14 +141,57 @@ export function HeroSection() {
             </div>
             
             <div className="mt-8">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t.categories}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t.topCategories}</p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/gpus')}>GPUs</Button>
-                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/cpus')}>CPUs</Button>
-                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/ram')}>RAM</Button>
-                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/motherboards')}>Motherboards</Button>
-                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/products/category/storage')}>Storage</Button>
+                {topCategories.map((category) => (
+                  <Button 
+                    key={category.slug}
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-full flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" 
+                    onClick={() => navigate(`/products/category/${category.slug}`)}
+                  >
+                    <span className="mr-1">{category.icon}</span> {category.name}
+                  </Button>
+                ))}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="rounded-full text-solidy-blue hover:text-solidy-mint hover:bg-transparent" 
+                  onClick={() => navigate('/products/category/all')}
+                >
+                  {t.categories} <ArrowRight size={14} className="ml-1" />
+                </Button>
               </div>
+            </div>
+            
+            <div className="mt-10">
+              {isAuthenticated ? (
+                <div className="flex flex-wrap gap-4">
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity" 
+                    asChild
+                  >
+                    <Link to="/post-listing">{t.sellNow}</Link>
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    asChild
+                  >
+                    <Link to="/dashboard">{t.viewDashboard}</Link>
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-solidy-blue to-solidy-mint hover:opacity-90 transition-opacity" 
+                  asChild
+                >
+                  <Link to="/auth?signup=true">{t.signUpToSell}</Link>
+                </Button>
+              )}
             </div>
           </div>
           
@@ -140,7 +205,7 @@ export function HeroSection() {
               />
               
               {/* Floating elements */}
-              <div className="absolute top-10 -right-10 z-30 glass-card p-4 rounded-xl shadow-lg animate-floating">
+              <div className="absolute top-10 -right-10 z-30 glass-card p-4 rounded-xl shadow-lg animate-floating bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">✓</div>
                   <div>
@@ -150,7 +215,7 @@ export function HeroSection() {
                 </div>
               </div>
               
-              <div className="absolute -bottom-5 -left-5 z-30 glass-card p-4 rounded-xl shadow-lg animate-floating" style={{ animationDelay: "1s" }}>
+              <div className="absolute -bottom-5 -left-5 z-30 glass-card p-4 rounded-xl shadow-lg animate-floating bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm" style={{ animationDelay: "1s" }}>
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-solidy-blue flex items-center justify-center text-white">🔒</div>
                   <div>
