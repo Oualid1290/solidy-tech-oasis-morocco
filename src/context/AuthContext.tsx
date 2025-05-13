@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -173,11 +172,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
       
       if (existingDevice?.user_id) {
-        // Sign in as the existing user
-        const { error: signInError } = await supabase.auth.signInWithId(existingDevice.user_id);
+        // Instead of using signInWithId (which doesn't exist), 
+        // we'll sign in as the existing user with a one-time password
+        const { data: { user: existingUser }, error: getUserError } = await supabase.auth.admin.getUserById(
+          existingDevice.user_id
+        );
         
-        if (signInError) {
-          throw signInError;
+        if (getUserError) {
+          throw getUserError;
+        }
+        
+        if (existingUser && existingUser.email) {
+          // Sign in with the existing user's email
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: existingUser.email,
+            password: fingerprintHash, // Use the fingerprint as the password
+          });
+          
+          if (signInError) {
+            throw signInError;
+          }
+        } else {
+          // If we can't sign in the existing user, create a new one
+          await createNewAnonymousUser(fingerprintHash);
         }
         
         toast({
@@ -186,33 +203,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
       } else {
         // Create a new anonymous user
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: `${crypto.randomUUID()}@anonymous.gamana.ma`,
-          password: crypto.randomUUID(),
-          options: {
-            data: {
-              is_anonymous: true,
-              username: `user_${Math.floor(Math.random() * 100000)}`,
-              role: 'buyer'
-            }
-          }
-        });
-        
-        if (signUpError) {
-          throw signUpError;
-        }
-        
-        // Store the device fingerprint
-        if (signUpData?.user) {
-          await supabase
-            .from("device_fingerprints")
-            .insert({
-              user_id: signUpData.user.id,
-              fingerprint_hash: fingerprintHash,
-              user_agent: navigator.userAgent,
-              ip_address: null // We can't get the IP from the client
-            });
-        }
+        await createNewAnonymousUser(fingerprintHash);
         
         toast({
           title: "Welcome to Gamana!",
@@ -227,6 +218,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Helper function to create a new anonymous user
+  const createNewAnonymousUser = async (fingerprintHash: string) => {
+    // Create a new anonymous user
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: `${crypto.randomUUID()}@anonymous.gamana.ma`,
+      password: fingerprintHash, // Use the fingerprint as the password
+      options: {
+        data: {
+          is_anonymous: true,
+          username: `user_${Math.floor(Math.random() * 100000)}`,
+          role: 'buyer'
+        }
+      }
+    });
+    
+    if (signUpError) {
+      throw signUpError;
+    }
+    
+    // Store the device fingerprint
+    if (signUpData?.user) {
+      await supabase
+        .from("device_fingerprints")
+        .insert({
+          user_id: signUpData.user.id,
+          fingerprint_hash: fingerprintHash,
+          user_agent: navigator.userAgent,
+          ip_address: null // We can't get the IP from the client
+        });
     }
   };
 
