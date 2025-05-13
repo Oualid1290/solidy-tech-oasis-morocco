@@ -223,9 +223,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   // Helper function to create a new anonymous user
   const createNewAnonymousUser = async (fingerprintHash: string) => {
-    // Create a new anonymous user
+    // Create a new anonymous user with a valid email format
+    const randomId = crypto.randomUUID().substring(0, 8);
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: `${crypto.randomUUID()}@anonymous.gamana.ma`,
+      email: `anonymous-${randomId}@example.com`, // Using a valid email domain format
       password: fingerprintHash, // Use the fingerprint as the password
       options: {
         data: {
