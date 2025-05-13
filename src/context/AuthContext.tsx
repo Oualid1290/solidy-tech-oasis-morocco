@@ -4,31 +4,82 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { toast } from "@/components/ui/use-toast";
 
+// Define user roles type based on the Supabase enum
+type UserRole = 'buyer' | 'seller' | 'admin';
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
+  userProfile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
+  signUp: (email: string, password: string, username: string, role: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  updateUserRole: (role: UserRole) => Promise<void>;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  generateAnonymousSession: () => Promise<void>;
+  linkAnonymousAccount: (email: string, password: string, username: string) => Promise<void>;
+};
+
+// Define user profile type to match the users table in Supabase
+type UserProfile = {
+  id: string;
+  username: string;
+  email?: string;
+  full_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  city?: string;
+  country?: string;
+  phone_number?: string;
+  role: UserRole;
+  is_verified: boolean;
+  last_seen: string;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
+  userProfile: null,
   isLoading: true,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
   isAuthenticated: false,
+  updateUserRole: async () => {},
+  updateProfile: async () => {},
+  generateAnonymousSession: async () => {},
+  linkAnonymousAccount: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const isAuthenticated = !!session;
+
+  // Fetch user profile data from the users table
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+      }
+
+      return data as UserProfile;
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener first
@@ -37,11 +88,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Auth state changed:", event, session);
         setSession(session);
         setUser(session?.user ?? null);
-        setIsLoading(false);
         
-        // Update user's last_seen in database
+        // Update user profile when auth state changes
         if (session?.user) {
-          updateLastSeen(session.user.id).catch(console.error);
+          // Using setTimeout to prevent blocking the onAuthStateChange callback
+          setTimeout(async () => {
+            const profile = await fetchUserProfile(session.user.id);
+            setUserProfile(profile);
+            updateLastSeen(session.user.id).catch(console.error);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUserProfile(null);
+          setIsLoading(false);
         }
       }
     );
@@ -51,11 +110,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Got existing session:", session);
       setSession(session);
       setUser(session?.user ?? null);
-      setIsLoading(false);
       
-      // Update user's last_seen in database
+      // Fetch user profile if session exists
       if (session?.user) {
-        updateLastSeen(session.user.id).catch(console.error);
+        fetchUserProfile(session.user.id).then(profile => {
+          setUserProfile(profile);
+          updateLastSeen(session.user.id).catch(console.error);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
       }
     });
 
@@ -74,8 +138,176 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Function to generate a fingerprint for anonymous authentication
+  const generateFingerprint = async (): Promise<string> => {
+    // Simple fingerprint based on navigator and screen properties
+    const fingerprint = {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+      colorDepth: window.screen.colorDepth,
+      pixelRatio: window.devicePixelRatio,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    
+    // Convert to string and hash using SubtleCrypto API
+    const msgUint8 = new TextEncoder().encode(JSON.stringify(fingerprint));
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  // Generate anonymous session based on device fingerprint
+  const generateAnonymousSession = async () => {
+    try {
+      setIsLoading(true);
+      const fingerprintHash = await generateFingerprint();
+      
+      // Check if we have a matching device fingerprint in the database
+      const { data: existingDevice } = await supabase
+        .from("device_fingerprints")
+        .select("user_id")
+        .eq("fingerprint_hash", fingerprintHash)
+        .maybeSingle();
+      
+      if (existingDevice?.user_id) {
+        // Sign in as the existing user
+        const { error: signInError } = await supabase.auth.signInWithId(existingDevice.user_id);
+        
+        if (signInError) {
+          throw signInError;
+        }
+        
+        toast({
+          title: "Welcome back!",
+          description: "You've been automatically signed in.",
+        });
+      } else {
+        // Create a new anonymous user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: `${crypto.randomUUID()}@anonymous.gamana.ma`,
+          password: crypto.randomUUID(),
+          options: {
+            data: {
+              is_anonymous: true,
+              username: `user_${Math.floor(Math.random() * 100000)}`,
+              role: 'buyer'
+            }
+          }
+        });
+        
+        if (signUpError) {
+          throw signUpError;
+        }
+        
+        // Store the device fingerprint
+        if (signUpData?.user) {
+          await supabase
+            .from("device_fingerprints")
+            .insert({
+              user_id: signUpData.user.id,
+              fingerprint_hash: fingerprintHash,
+              user_agent: navigator.userAgent,
+              ip_address: null // We can't get the IP from the client
+            });
+        }
+        
+        toast({
+          title: "Welcome to Gamana!",
+          description: "You've been automatically signed in as a guest user.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Automatic login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Link anonymous account to a real account
+  const linkAnonymousAccount = async (email: string, password: string, username: string) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "No anonymous session to link",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // First check if the username already exists
+      const { data: existingUsers, error: checkError } = await supabase
+        .from("users")
+        .select("username")
+        .eq("username", username)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error("Error checking username:", checkError);
+      }
+      
+      if (existingUsers) {
+        toast({
+          title: "Account linking failed",
+          description: "Username already exists. Please choose another username.",
+          variant: "destructive",
+        });
+        throw new Error("Username already exists");
+      }
+      
+      // Update the email and password for the current user
+      const { error } = await supabase.auth.updateUser({
+        email,
+        password,
+        data: {
+          is_anonymous: false,
+          username
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Update the user profile in the database
+      await supabase
+        .from("users")
+        .update({
+          email,
+          username,
+          is_verified: true
+        })
+        .eq("id", user.id);
+      
+      toast({
+        title: "Account linked successfully",
+        description: "Your anonymous account has been linked to your email.",
+      });
+      
+      // Refresh user profile
+      const profile = await fetchUserProfile(user.id);
+      setUserProfile(profile);
+    } catch (error: any) {
+      toast({
+        title: "Account linking failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -94,11 +326,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string, username: string) => {
+  const signUp = async (email: string, password: string, username: string, role: UserRole = 'buyer') => {
     try {
+      setIsLoading(true);
       // First check if the username already exists to provide a better error message
       const { data: existingUsers, error: checkError } = await supabase
         .from("users")
@@ -126,6 +361,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         options: {
           data: {
             username,
+            role,
           },
         },
       });
@@ -143,11 +379,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
       toast({
         title: "Signed out",
@@ -159,6 +398,83 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update user role
+  const updateUserRole = async (role: UserRole) => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Update metadata in auth
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { role }
+      });
+      
+      if (authError) throw authError;
+      
+      // Update role in users table
+      const { error: dbError } = await supabase
+        .from("users")
+        .update({ role })
+        .eq("id", user.id);
+      
+      if (dbError) throw dbError;
+      
+      // Refresh user profile
+      const updatedProfile = await fetchUserProfile(user.id);
+      setUserProfile(updatedProfile);
+      
+      toast({
+        title: "Role updated",
+        description: `Your account role has been updated to ${role}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to update role",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update user profile
+  const updateProfile = async (profile: Partial<UserProfile>) => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Update profile in users table
+      const { error } = await supabase
+        .from("users")
+        .update(profile)
+        .eq("id", user.id);
+      
+      if (error) throw error;
+      
+      // Refresh user profile
+      const updatedProfile = await fetchUserProfile(user.id);
+      setUserProfile(updatedProfile);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Profile update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -167,11 +483,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         session,
         user,
+        userProfile,
         isLoading,
         signIn,
         signUp,
         signOut,
         isAuthenticated,
+        updateUserRole,
+        updateProfile,
+        generateAnonymousSession,
+        linkAnonymousAccount
       }}
     >
       {children}

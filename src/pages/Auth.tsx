@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate, useLocation } from "react-router-dom";
@@ -10,10 +10,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, CheckCircle, User, Building, ShieldCheck } from "lucide-react";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+
+type UserRole = 'buyer' | 'seller' | 'admin';
 
 const Auth = () => {
-  const { isAuthenticated, signIn, signUp, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, signIn, signUp, isLoading: authLoading, generateAnonymousSession, userProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const location = useLocation();
@@ -21,6 +25,7 @@ const Auth = () => {
   const initialTab = searchParams.get("signup") === "true" ? "register" : "login";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('buyer');
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -31,6 +36,13 @@ const Auth = () => {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
+
+  // Try anonymous login on first load if not already authenticated
+  useEffect(() => {
+    if (!isAuthenticated && !userProfile && !authLoading) {
+      generateAnonymousSession();
+    }
+  }, [isAuthenticated, userProfile, authLoading, generateAnonymousSession]);
 
   // If user is authenticated, redirect to home page
   if (isAuthenticated) {
@@ -66,13 +78,14 @@ const Auth = () => {
     }
 
     try {
-      await signUp(registerEmail, registerPassword, username);
+      await signUp(registerEmail, registerPassword, username, selectedRole);
       setShowSuccessDialog(true);
       // Reset the form
       setRegisterEmail("");
       setRegisterPassword("");
       setConfirmPassword("");
       setUsername("");
+      setSelectedRole('buyer');
     } catch (error) {
       // Error is handled in the auth context
       console.error("Registration error:", error);
@@ -207,6 +220,59 @@ const Auth = () => {
                         minLength={6}
                       />
                     </div>
+                    
+                    <div className="space-y-3">
+                      <Label>I want to join Gamana as a:</Label>
+                      <RadioGroup 
+                        value={selectedRole} 
+                        onValueChange={(value) => setSelectedRole(value as UserRole)}
+                        className="grid grid-cols-1 gap-4 pt-2"
+                      >
+                        <div>
+                          <RadioGroupItem 
+                            value="buyer" 
+                            id="buyer" 
+                            className="peer sr-only" 
+                          />
+                          <Label 
+                            htmlFor="buyer" 
+                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                          >
+                            <div className="mb-3 rounded-full bg-primary/10 p-2">
+                              <User className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="space-y-1 text-center">
+                              <h3 className="font-semibold">Buyer</h3>
+                              <p className="text-sm text-muted-foreground">
+                                I want to browse and buy products
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+
+                        <div>
+                          <RadioGroupItem 
+                            value="seller" 
+                            id="seller" 
+                            className="peer sr-only" 
+                          />
+                          <Label 
+                            htmlFor="seller" 
+                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                          >
+                            <div className="mb-3 rounded-full bg-primary/10 p-2">
+                              <Building className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="space-y-1 text-center">
+                              <h3 className="font-semibold">Seller</h3>
+                              <p className="text-sm text-muted-foreground">
+                                I want to list and sell products
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
                   </CardContent>
                   <CardFooter>
                     <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
@@ -227,17 +293,22 @@ const Auth = () => {
           
           {/* Success Dialog */}
           <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-            <DialogContent>
-              <DialogTitle>Account Created Successfully</DialogTitle>
-              <DialogDescription>
-                Your account has been created. You can now sign in with your credentials.
-              </DialogDescription>
-              <Button onClick={() => {
-                setShowSuccessDialog(false);
-                setActiveTab("login");
-              }}>
-                Go to Login
-              </Button>
+            <DialogContent className="sm:max-w-md">
+              <div className="flex flex-col items-center text-center pt-4">
+                <div className="rounded-full bg-green-100 p-3 mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <DialogTitle className="text-xl">Account Created Successfully</DialogTitle>
+                <DialogDescription className="pt-2 pb-4">
+                  Your account has been created. You can now sign in with your credentials.
+                </DialogDescription>
+                <Button onClick={() => {
+                  setShowSuccessDialog(false);
+                  setActiveTab("login");
+                }}>
+                  Go to Login
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
