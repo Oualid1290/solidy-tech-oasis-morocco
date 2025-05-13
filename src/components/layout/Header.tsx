@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, Search, User, ShoppingCart, X, LayoutDashboard } from "lucide-react";
+import { Menu, Search, User, ShoppingCart, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -21,6 +21,7 @@ const content = {
     signup: "Sign Up",
     dashboard: "Dashboard",
     profile: "Profile",
+    logout: "Logout"
   },
   fr: {
     home: "Accueil",
@@ -33,6 +34,7 @@ const content = {
     signup: "S'inscrire",
     dashboard: "Tableau de bord",
     profile: "Profil",
+    logout: "Se déconnecter"
   },
   ar: {
     home: "الرئيسية",
@@ -45,6 +47,7 @@ const content = {
     signup: "التسجيل",
     dashboard: "لوحة التحكم",
     profile: "الملف الشخصي",
+    logout: "تسجيل الخروج"
   }
 };
 
@@ -130,6 +133,14 @@ export function Header() {
                   <span>{t.profile}</span>
                 </Link>
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-full" 
+                onClick={() => signOut()}>
+                <LogOut size={18} className="mr-1" />
+                <span>{t.logout}</span>
+              </Button>
             </>
           ) : (
             <>
@@ -192,6 +203,16 @@ export function Header() {
                   <Link to={`/profile/${user?.id}`} className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
                     {t.profile}
                   </Link>
+                  <button 
+                    className="font-medium text-lg text-left flex items-center gap-2 text-red-500"
+                    onClick={() => {
+                      signOut();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut size={18} />
+                    {t.logout}
+                  </button>
                 </>
               )}
             </nav>
