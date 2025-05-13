@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -268,12 +267,12 @@ const CategoryPage = () => {
 
                 <div>
                   <h3 className="text-sm font-medium mb-2">Location</h3>
-                  <Select value={selectedCity || ""} onValueChange={setSelectedCity}>
+                  <Select value={selectedCity || undefined} onValueChange={setSelectedCity}>
                     <SelectTrigger>
                       <SelectValue placeholder="All locations" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All locations</SelectItem>
+                      <SelectItem value="all_locations">All locations</SelectItem>
                       {cities.map((city) => (
                         <SelectItem key={city} value={city}>
                           {city}
@@ -366,14 +365,14 @@ const CategoryPage = () => {
                         <AccordionTrigger>Location</AccordionTrigger>
                         <AccordionContent>
                           <Select
-                            value={selectedCity || ""}
+                            value={selectedCity || undefined}
                             onValueChange={setSelectedCity}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="All locations" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">All locations</SelectItem>
+                              <SelectItem value="all_locations">All locations</SelectItem>
                               {cities.map((city) => (
                                 <SelectItem key={city} value={city}>
                                   {city}
