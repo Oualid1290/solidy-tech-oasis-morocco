@@ -99,6 +99,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
+      // First check if the username already exists to provide a better error message
+      const { data: existingUsers, error: checkError } = await supabase
+        .from("users")
+        .select("username")
+        .eq("username", username)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error("Error checking username:", checkError);
+      }
+      
+      if (existingUsers) {
+        toast({
+          title: "Signup failed",
+          description: "Username already exists. Please choose another username.",
+          variant: "destructive",
+        });
+        throw new Error("Username already exists");
+      }
+      
+      // If username is available, proceed with signup
       const { error } = await supabase.auth.signUp({
         email,
         password,
