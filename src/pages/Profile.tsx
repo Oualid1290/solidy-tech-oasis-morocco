@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { useAuth } from "@/context/AuthContext";
@@ -12,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, MapPin, Calendar, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { useToast } from "@/components/ui/use-toast";
 
 type UserProfile = {
   id: string;
@@ -31,59 +29,27 @@ type UserProfile = {
 
 const ProfilePage = () => {
   const { username } = useParams<{ username: string }>();
-  const { userProfile: authUserProfile, user: authUser } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const { userProfile: authUserProfile } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
   const [listingsCount, setListingsCount] = useState(0);
   
-  const isOwnProfile = 
-    authUserProfile?.username === username || 
-    (authUser && !username); // If no username is provided and user is logged in
+  const isOwnProfile = authUserProfile?.username === username;
   
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true);
       
       try {
-        if (!username && authUser) {
-          // If no username provided but user is authenticated, redirect to their profile
-          if (authUserProfile?.username) {
-            navigate(`/profile/${authUserProfile.username}`);
-            return;
-          }
-        }
-        
         // Fetch user profile by username
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
           .eq("username", username)
-          .maybeSingle();
+          .single();
         
-        if (userError || !userData) {
-          if (userError?.code === "PGRST116") {
-            // No profile found, show appropriate message
-            setProfile(null);
-            setIsLoading(false);
-            
-            if (isOwnProfile) {
-              // If this is the current user's profile but it doesn't exist in DB yet
-              toast({
-                title: "Creating your profile",
-                description: "Setting up your profile information...",
-              });
-              
-              // Wait a moment and try again - the AuthContext might be creating the profile
-              setTimeout(() => {
-                window.location.reload();
-              }, 2000);
-            }
-            return;
-          }
-          
+        if (userError) {
           throw userError;
         }
         
@@ -107,8 +73,13 @@ const ProfilePage = () => {
       }
     };
     
-    fetchProfile();
-  }, [username, authUserProfile, authUser, navigate, isOwnProfile, toast]);
+    if (username) {
+      fetchProfile();
+    } else if (authUserProfile) {
+      setProfile(authUserProfile as unknown as UserProfile);
+      setIsLoading(false);
+    }
+  }, [username, authUserProfile]);
   
   if (isLoading) {
     return (
@@ -138,7 +109,6 @@ const ProfilePage = () => {
   }
   
   const getInitials = (name: string) => {
-    if (!name) return "??";
     return name
       .split(' ')
       .map(n => n[0])

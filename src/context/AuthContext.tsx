@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -70,41 +71,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error("Error fetching user profile:", error);
-        
-        // If no profile exists, create one for the authenticated user
-        if (error.code === "PGRST116") {
-          const authUser = await supabase.auth.getUser();
-          
-          if (authUser.data?.user) {
-            const userData = authUser.data.user;
-            const username = userData.user_metadata?.username || 
-                            userData.email?.split('@')[0] || 
-                            `user_${Math.floor(Math.random() * 100000)}`;
-            
-            const newProfile = {
-              id: userId,
-              username: username,
-              email: userData.email,
-              role: (userData.user_metadata?.role as UserRole) || 'buyer',
-              is_verified: !!userData.email_confirmed_at,
-              last_seen: new Date().toISOString()
-            };
-            
-            const { data: createdProfile, error: createError } = await supabase
-              .from("users")
-              .insert([newProfile])
-              .select()
-              .single();
-              
-            if (createError) {
-              console.error("Error creating user profile:", createError);
-              return null;
-            }
-            
-            return createdProfile as UserProfile;
-          }
-        }
-        
         return null;
       }
 
@@ -207,31 +173,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
       
       if (existingDevice?.user_id) {
-        // Instead of using signInWithId (which doesn't exist), 
-        // we'll find the user information and sign in with email/password
-        const { data, error: getUserError } = await supabase
-          .from("users")
-          .select("email")
-          .eq("id", existingDevice.user_id)
-          .maybeSingle();
+        // Sign in as the existing user
+        const { error: signInError } = await supabase.auth.signInWithId(existingDevice.user_id);
         
-        if (getUserError || !data?.email) {
-          throw new Error("Failed to retrieve user information");
-        }
-        
-        if (data.email) {
-          // Sign in with the existing user's email
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: fingerprintHash, // Use the fingerprint as the password
-          });
-          
-          if (signInError) {
-            throw signInError;
-          }
-        } else {
-          // If we can't sign in the existing user, create a new one
-          await createNewAnonymousUser(fingerprintHash);
+        if (signInError) {
+          throw signInError;
         }
         
         toast({
@@ -240,7 +186,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
       } else {
         // Create a new anonymous user
-        await createNewAnonymousUser(fingerprintHash);
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: `${crypto.randomUUID()}@anonymous.gamana.ma`,
+          password: crypto.randomUUID(),
+          options: {
+            data: {
+              is_anonymous: true,
+              username: `user_${Math.floor(Math.random() * 100000)}`,
+              role: 'buyer'
+            }
+          }
+        });
+        
+        if (signUpError) {
+          throw signUpError;
+        }
+        
+        // Store the device fingerprint
+        if (signUpData?.user) {
+          await supabase
+            .from("device_fingerprints")
+            .insert({
+              user_id: signUpData.user.id,
+              fingerprint_hash: fingerprintHash,
+              user_agent: navigator.userAgent,
+              ip_address: null // We can't get the IP from the client
+            });
+        }
         
         toast({
           title: "Welcome to Gamana!",
@@ -255,54 +227,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-  
-  // Helper function to create a new anonymous user
-  const createNewAnonymousUser = async (fingerprintHash: string) => {
-    // Create a new anonymous user with a valid email format
-    const randomId = crypto.randomUUID().substring(0, 8);
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: `anonymous-${randomId}@example.com`, // Using a valid email domain format
-      password: fingerprintHash, // Use the fingerprint as the password
-      options: {
-        data: {
-          is_anonymous: true,
-          username: `user_${Math.floor(Math.random() * 100000)}`,
-          role: 'buyer' as UserRole
-        }
-      }
-    });
-    
-    if (signUpError) {
-      throw signUpError;
-    }
-    
-    // Store the device fingerprint
-    if (signUpData?.user) {
-      await supabase
-        .from("device_fingerprints")
-        .insert({
-          user_id: signUpData.user.id,
-          fingerprint_hash: fingerprintHash,
-          user_agent: navigator.userAgent,
-          ip_address: null // We can't get the IP from the client
-        });
-        
-      // Create a user profile entry
-      const newProfile = {
-        id: signUpData.user.id,
-        username: signUpData.user.user_metadata.username || `user_${Math.floor(Math.random() * 100000)}`,
-        role: 'buyer' as UserRole,
-        is_verified: false,
-        last_seen: new Date().toISOString()
-      };
-      
-      await supabase
-        .from("users")
-        .insert(newProfile) // FIX: Pass the object directly, not wrapped in an array
-        .select()
-        .single();
     }
   };
 
@@ -431,7 +355,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       // If username is available, proceed with signup
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -443,22 +367,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) throw error;
-      
-      // Create user profile - even if email confirmation is pending
-      if (data?.user) {
-        const newProfile = {
-          id: data.user.id,
-          username,
-          email,
-          role,
-          is_verified: false,
-          last_seen: new Date().toISOString()
-        };
-        
-        await supabase
-          .from("users")
-          .insert([newProfile]);
-      }
       
       toast({
         title: "Account created",
