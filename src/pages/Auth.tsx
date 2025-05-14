@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,21 +11,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, CheckCircle, User, Building, ShieldCheck } from "lucide-react";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Loader2, CheckCircle, User, Building } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type UserRole = 'buyer' | 'seller' | 'admin';
 
 const Auth = () => {
-  const { isAuthenticated, signIn, signUp, isLoading: authLoading, generateAnonymousSession, userProfile } = useAuth();
+  const { isAuthenticated, signIn, signUp, isLoading: authLoading, userProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get("redirect") || "/";
   const initialTab = searchParams.get("signup") === "true" ? "register" : "login";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('buyer');
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -37,27 +40,37 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
 
-  // Try anonymous login on first load if not already authenticated
+  // Clear form errors when changing tabs
   useEffect(() => {
-    if (!isAuthenticated && !userProfile && !authLoading) {
-      generateAnonymousSession();
-    }
-  }, [isAuthenticated, userProfile, authLoading, generateAnonymousSession]);
+    setFormError(null);
+  }, [activeTab]);
 
-  // If user is authenticated, redirect to home page
-  if (isAuthenticated) {
-    return <Navigate to="/" />;
+  // If user is authenticated, redirect to home page or the redirect URL
+  useEffect(() => {
+    if (isAuthenticated && userProfile) {
+      navigate(redirectTo);
+    }
+  }, [isAuthenticated, userProfile, navigate, redirectTo]);
+
+  // If the user is already authenticated, redirect them
+  if (isAuthenticated && !isLoading && !authLoading) {
+    return <Navigate to={redirectTo} />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
 
     try {
+      if (!loginEmail.trim() || !loginPassword.trim()) {
+        throw new Error("Please fill in all required fields");
+      }
+
       await signIn(loginEmail, loginPassword);
-    } catch (error) {
-      // Error is handled in the auth context
+    } catch (error: any) {
       console.error("Login error:", error);
+      setFormError(error.message || "Failed to sign in. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -66,29 +79,34 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (registerPassword !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        description: "Please make sure your passwords match.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
+    setFormError(null);
 
     try {
+      // Form validation
+      if (!registerEmail.trim() || !registerPassword.trim() || !username.trim() || !confirmPassword.trim()) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      if (registerPassword !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      if (registerPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+
       await signUp(registerEmail, registerPassword, username, selectedRole);
       setShowSuccessDialog(true);
+      
       // Reset the form
       setRegisterEmail("");
       setRegisterPassword("");
       setConfirmPassword("");
       setUsername("");
       setSelectedRole('buyer');
-    } catch (error) {
-      // Error is handled in the auth context
+    } catch (error: any) {
       console.error("Registration error:", error);
+      setFormError(error.message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +129,12 @@ const Auth = () => {
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
 
+            {formError && (
+              <Alert className="mt-4 border-destructive/50 text-destructive">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+
             <TabsContent value="login">
               <Card>
                 <CardHeader>
@@ -130,7 +154,7 @@ const Auth = () => {
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         required
-                        disabled={isLoading}
+                        disabled={isLoading || authLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -143,12 +167,16 @@ const Auth = () => {
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         required
-                        disabled={isLoading}
+                        disabled={isLoading || authLoading}
                       />
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading || authLoading}
+                    >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -217,7 +245,6 @@ const Auth = () => {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         disabled={isLoading}
-                        minLength={6}
                       />
                     </div>
                     
@@ -275,7 +302,11 @@ const Auth = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading || authLoading}
+                    >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

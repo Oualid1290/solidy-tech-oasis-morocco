@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             const { data: createdProfile, error: createError } = await supabase
               .from("users")
-              .insert([newProfile])
+              .insert(newProfile)
               .select()
               .single();
               
@@ -262,8 +262,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const createNewAnonymousUser = async (fingerprintHash: string) => {
     // Create a new anonymous user with a valid email format
     const randomId = crypto.randomUUID().substring(0, 8);
+    const email = `anonymous-${randomId}@gamana.app`;
+    
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: `anonymous-${randomId}@example.com`, // Using a valid email domain format
+      email: email,
       password: fingerprintHash, // Use the fingerprint as the password
       options: {
         data: {
@@ -300,7 +302,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       await supabase
         .from("users")
-        .insert(newProfile) // FIX: Pass the object directly, not wrapped in an array
+        .insert(newProfile)
         .select()
         .single();
     }
@@ -384,12 +386,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) throw error;
+      
+      // Ensure the user profile exists
+      if (data?.user) {
+        const profile = await fetchUserProfile(data.user.id);
+        if (!profile) {
+          // Profile doesn't exist, create one
+          const newProfile = {
+            id: data.user.id,
+            username: data.user.email?.split('@')[0] || `user_${Math.floor(Math.random() * 100000)}`,
+            email: data.user.email,
+            role: (data.user.user_metadata?.role as UserRole) || 'buyer',
+            is_verified: !!data.user.email_confirmed_at,
+            last_seen: new Date().toISOString()
+          };
+          
+          const { error: createError } = await supabase
+            .from("users")
+            .insert(newProfile);
+            
+          if (createError) {
+            console.error("Error creating user profile during sign in:", createError);
+          }
+        }
+      }
       
       toast({
         title: "Welcome back!",
@@ -455,9 +481,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           last_seen: new Date().toISOString()
         };
         
-        await supabase
+        const { error: profileError } = await supabase
           .from("users")
-          .insert([newProfile]);
+          .insert(newProfile);
+          
+        if (profileError) {
+          console.error("Error creating profile during signup:", profileError);
+        }
       }
       
       toast({
