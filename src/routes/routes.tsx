@@ -5,7 +5,6 @@ import NotFound from "@/pages/NotFound";
 import ProductDetail from "@/pages/ProductDetail";
 import PostListing from "@/pages/PostListing";
 import Chat from "@/pages/Chat";
-import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Auth from "@/pages/Auth";
 import CategoryPage from "@/pages/CategoryPage";
@@ -13,7 +12,7 @@ import SearchResults from "@/pages/SearchResults";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import FAQ from "@/pages/FAQ";
-import { Navigate } from "react-router-dom";
+import { dashboardRoute } from "./dashboardRoutes";
 
 interface RouteConfig {
   path: string;
@@ -60,11 +59,8 @@ export const publicRoutes: RouteConfig[] = [
 
 // Protected routes that require authentication
 export const protectedRoutes: RouteConfig[] = [
-  {
-    path: "/dashboard",
-    element: <Dashboard />,
-    requireAuth: true,
-  },
+  // Dashboard routes are defined in dashboardRoutes.tsx
+  dashboardRoute,
   {
     path: "/profile/:username",
     element: <Profile />,
