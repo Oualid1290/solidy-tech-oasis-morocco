@@ -31,6 +31,7 @@ export function DashboardLayout() {
     if (!isLoading && userProfile && currentTab === '') {
       // Auto-navigate to role-specific dashboard if we're on the main dashboard page
       if (location.pathname === '/dashboard') {
+        console.log(`Navigating to dashboard/${userProfile.role}`);
         navigate(`/dashboard/${userProfile.role}`);
       }
     }
@@ -48,7 +49,7 @@ export function DashboardLayout() {
   }
 
   // Redirect to auth page if user is not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !userProfile) {
     return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
@@ -63,11 +64,12 @@ export function DashboardLayout() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="buyer">Buyer Dashboard</TabsTrigger>
-                <TabsTrigger value="seller">Seller Dashboard</TabsTrigger>
-                <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
+            {/* Show only the tab for the user's role */}
+            <Tabs value={userProfile.role} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-1">
+                <TabsTrigger value={userProfile.role}>
+                  {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)} Dashboard
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </CardContent>

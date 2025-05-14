@@ -7,6 +7,7 @@ import { Navigate } from "react-router-dom";
 const Dashboard = () => {
   const { isAuthenticated, isLoading, userProfile } = useAuth();
   
+  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
       <div className="container mx-auto py-12 flex items-center justify-center">
@@ -15,7 +16,14 @@ const Dashboard = () => {
     );
   }
 
+  // If not authenticated, redirect to auth page
   if (!isAuthenticated) {
+    return <Navigate to="/auth" />;
+  }
+  
+  // If no user profile, redirect to auth page
+  if (!userProfile) {
+    console.log("No user profile found, redirecting to auth page");
     return <Navigate to="/auth" />;
   }
 
