@@ -208,19 +208,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (existingDevice?.user_id) {
         // Instead of using signInWithId (which doesn't exist), 
-        // we'll sign in as the existing user with a one-time password
-        const { data: { user: existingUser }, error: getUserError } = await supabase.auth.admin.getUserById(
-          existingDevice.user_id
-        );
+        // we'll find the user information and sign in with email/password
+        const { data, error: getUserError } = await supabase
+          .from("users")
+          .select("email")
+          .eq("id", existingDevice.user_id)
+          .maybeSingle();
         
-        if (getUserError) {
-          throw getUserError;
+        if (getUserError || !data?.email) {
+          throw new Error("Failed to retrieve user information");
         }
         
-        if (existingUser && existingUser.email) {
+        if (data.email) {
           // Sign in with the existing user's email
           const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: existingUser.email,
+            email: data.email,
             password: fingerprintHash, // Use the fingerprint as the password
           });
           
@@ -267,7 +269,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         data: {
           is_anonymous: true,
           username: `user_${Math.floor(Math.random() * 100000)}`,
-          role: 'buyer'
+          role: 'buyer' as UserRole
         }
       }
     });
@@ -291,14 +293,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const newProfile = {
         id: signUpData.user.id,
         username: signUpData.user.user_metadata.username || `user_${Math.floor(Math.random() * 100000)}`,
-        role: 'buyer',
+        role: 'buyer' as UserRole,
         is_verified: false,
         last_seen: new Date().toISOString()
       };
       
       await supabase
         .from("users")
-        .insert([newProfile])
+        .insert(newProfile) // FIX: Pass the object directly, not wrapped in an array
         .select()
         .single();
     }
