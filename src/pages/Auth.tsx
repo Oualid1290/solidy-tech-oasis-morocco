@@ -45,17 +45,15 @@ const Auth = () => {
     setFormError(null);
   }, [activeTab]);
 
-  // If user is authenticated, redirect to home page or the redirect URL
+  // Only redirect if user profile is fully loaded
   useEffect(() => {
-    if (isAuthenticated && userProfile) {
+    if (isAuthenticated && userProfile && !isLoading && !authLoading) {
       navigate(redirectTo);
     }
-  }, [isAuthenticated, userProfile, navigate, redirectTo]);
+  }, [isAuthenticated, userProfile, navigate, redirectTo, isLoading, authLoading]);
 
-  // If the user is already authenticated, redirect them
-  if (isAuthenticated && !isLoading && !authLoading) {
-    return <Navigate to={redirectTo} />;
-  }
+  // Don't automatically redirect on page load - wait for explicit authentication
+  // We'll only show the "Navigate" component after a successful login/signup
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
