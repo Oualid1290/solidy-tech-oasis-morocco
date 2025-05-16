@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Product } from "@/utils/listingHelpers";
 
 // Mock product data - in a real app this would come from an API filtered by location
-const mockProductsByLocation = {
+const mockProductsByLocation: Record<string, Product[]> = {
   casablanca: [
     {
       id: '1',
@@ -15,10 +16,10 @@ const mockProductsByLocation = {
       description: 'High-performance gaming computer with RTX 4090',
       price: 25000,
       location: 'Casablanca',
-      image: '/placeholder.svg',
+      imageUrl: '/placeholder.svg',
       condition: 'New',
-      seller: 'TechMaster',
-      postedDate: '2025-05-12'
+      sellerRating: 4.8,
+      category: 'Computers'
     },
     {
       id: '5',
@@ -26,10 +27,10 @@ const mockProductsByLocation = {
       description: '7.1 surround sound gaming headset with noise cancellation',
       price: 650,
       location: 'Casablanca',
-      image: '/placeholder.svg',
+      imageUrl: '/placeholder.svg',
       condition: 'New',
-      seller: 'AudioGuru',
-      postedDate: '2025-05-11'
+      sellerRating: 4.5,
+      category: 'Audio'
     }
   ],
   rabat: [
@@ -39,10 +40,10 @@ const mockProductsByLocation = {
       description: 'RGB mechanical keyboard with Cherry MX switches',
       price: 800,
       location: 'Rabat',
-      image: '/placeholder.svg',
-      condition: 'Used - Like New',
-      seller: 'PCEnthusiast',
-      postedDate: '2025-05-14'
+      imageUrl: '/placeholder.svg',
+      condition: 'Used',
+      sellerRating: 4.2,
+      category: 'Peripherals'
     }
   ],
   marrakech: [
@@ -52,10 +53,10 @@ const mockProductsByLocation = {
       description: '34" curved ultrawide monitor, 144Hz, 1ms response time',
       price: 3500,
       location: 'Marrakech',
-      image: '/placeholder.svg',
-      condition: 'Used - Good',
-      seller: 'DisplayPro',
-      postedDate: '2025-05-10'
+      imageUrl: '/placeholder.svg',
+      condition: 'Used',
+      sellerRating: 4.0,
+      category: 'Monitors'
     }
   ],
   fes: [
@@ -65,10 +66,10 @@ const mockProductsByLocation = {
       description: 'Raspberry Pi 4 Model B with 8GB RAM',
       price: 950,
       location: 'Fes',
-      image: '/placeholder.svg',
+      imageUrl: '/placeholder.svg',
       condition: 'New',
-      seller: 'MakerSpace',
-      postedDate: '2025-05-08'
+      sellerRating: 4.7,
+      category: 'DIY'
     }
   ],
   tangier: [
@@ -78,10 +79,10 @@ const mockProductsByLocation = {
       description: 'Ergonomic wireless mouse with long battery life',
       price: 350,
       location: 'Tangier',
-      image: '/placeholder.svg',
+      imageUrl: '/placeholder.svg',
       condition: 'New',
-      seller: 'MouseMaster',
-      postedDate: '2025-05-15'
+      sellerRating: 4.3,
+      category: 'Peripherals'
     }
   ]
 };
@@ -98,7 +99,7 @@ const locationNames: Record<string, string> = {
 const LocationPage = () => {
   const { locationSlug } = useParams<{ locationSlug: string }>();
   const navigate = useNavigate();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [locationName, setLocationName] = useState<string>('');
   
   useEffect(() => {
@@ -132,15 +133,9 @@ const LocationPage = () => {
             {products.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {products.map(product => (
-                  <ProductCard 
-                    key={product.id}
-                    id={product.id}
-                    title={product.title}
-                    price={product.price}
-                    location={product.location}
-                    imageUrl={product.image}
-                    onClick={() => handleProductClick(product.id)}
-                  />
+                  <div key={product.id} onClick={() => handleProductClick(product.id)}>
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             ) : (

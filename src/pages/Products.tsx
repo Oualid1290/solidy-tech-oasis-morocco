@@ -4,19 +4,20 @@ import { ProductCard } from "@/components/products/ProductCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Product } from "@/utils/listingHelpers";
 
 // Mock product data - in a real app this would come from an API
-const mockProducts = [
+const mockProducts: Product[] = [
   {
     id: '1',
     title: 'Gaming PC',
     description: 'High-performance gaming computer with RTX 4090',
     price: 25000,
     location: 'Casablanca',
-    image: '/placeholder.svg',
+    imageUrl: '/placeholder.svg',
     condition: 'New',
-    seller: 'TechMaster',
-    postedDate: '2025-05-12'
+    sellerRating: 4.5,
+    category: 'Computers'
   },
   {
     id: '2',
@@ -24,10 +25,10 @@ const mockProducts = [
     description: 'RGB mechanical keyboard with Cherry MX switches',
     price: 800,
     location: 'Rabat',
-    image: '/placeholder.svg',
-    condition: 'Used - Like New',
-    seller: 'PCEnthusiast',
-    postedDate: '2025-05-14'
+    imageUrl: '/placeholder.svg',
+    condition: 'Used',
+    sellerRating: 4.2,
+    category: 'Peripherals'
   },
   {
     id: '3',
@@ -35,10 +36,10 @@ const mockProducts = [
     description: '34" curved ultrawide monitor, 144Hz, 1ms response time',
     price: 3500,
     location: 'Marrakech',
-    image: '/placeholder.svg',
-    condition: 'Used - Good',
-    seller: 'DisplayPro',
-    postedDate: '2025-05-10'
+    imageUrl: '/placeholder.svg',
+    condition: 'Used',
+    sellerRating: 4.8,
+    category: 'Monitors'
   },
   {
     id: '4',
@@ -46,16 +47,16 @@ const mockProducts = [
     description: 'Ergonomic wireless mouse with long battery life',
     price: 350,
     location: 'Tangier',
-    image: '/placeholder.svg',
+    imageUrl: '/placeholder.svg',
     condition: 'New',
-    seller: 'MouseMaster',
-    postedDate: '2025-05-15'
+    sellerRating: 4.3,
+    category: 'Peripherals'
   }
 ];
 
 const Products = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   
   useEffect(() => {
     // In a real app, you would fetch products from an API here
@@ -79,15 +80,9 @@ const Products = () => {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map(product => (
-                <ProductCard 
-                  key={product.id}
-                  id={product.id}
-                  title={product.title}
-                  price={product.price}
-                  location={product.location}
-                  imageUrl={product.image}
-                  onClick={() => handleProductClick(product.id)}
-                />
+                <div key={product.id} onClick={() => handleProductClick(product.id)}>
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           </CardContent>
