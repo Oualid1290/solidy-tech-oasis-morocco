@@ -69,6 +69,7 @@ const SearchResults = () => {
           .select(`
             id,
             title,
+            description,
             price,
             condition,
             city,
@@ -97,6 +98,7 @@ const SearchResults = () => {
         const transformedProducts: Product[] = listingsData.map((listing: any) => ({
           id: listing.id,
           title: listing.title,
+          description: listing.description || "No description available",
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
           condition: formatCondition(listing.condition),

@@ -13,6 +13,7 @@ const mockProducts: Product[] = [
   {
     id: "1",
     title: "NVIDIA GeForce RTX 3080 Graphics Card",
+    description: "High-end graphics card for gaming and professional work with ray tracing capabilities",
     price: 8500,
     imageUrl: "https://images.unsplash.com/photo-1591488320449-011701bb6704?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
     condition: "New",
@@ -23,6 +24,7 @@ const mockProducts: Product[] = [
   {
     id: "2",
     title: "AMD Ryzen 9 5900X Processor",
+    description: "12-core, 24-thread unlocked desktop processor with high performance",
     price: 4200,
     imageUrl: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
     condition: "New",
@@ -33,6 +35,7 @@ const mockProducts: Product[] = [
   {
     id: "3",
     title: "Corsair Vengeance RGB Pro 32GB RAM",
+    description: "High-performance DDR4 memory with dynamic multi-zone RGB lighting",
     price: 1500,
     imageUrl: "https://images.unsplash.com/photo-1592664474496-8f3be7f5de23?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
     condition: "New",
@@ -43,6 +46,7 @@ const mockProducts: Product[] = [
   {
     id: "4",
     title: "ASUS ROG Strix Z590-E Gaming Motherboard",
+    description: "Premium ATX gaming motherboard with advanced cooling and connectivity options",
     price: 2800,
     imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
     condition: "Used",

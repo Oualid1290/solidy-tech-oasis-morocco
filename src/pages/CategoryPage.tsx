@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -73,6 +74,7 @@ const CategoryPage = () => {
             title,
             price,
             condition,
+            description,
             city,
             thumbnail_url,
             user:user_id(id, username),
@@ -87,6 +89,7 @@ const CategoryPage = () => {
         const transformedProducts: Product[] = listingsData.map((listing: any) => ({
           id: listing.id,
           title: listing.title,
+          description: listing.description || "No description available",
           price: listing.price,
           imageUrl: listing.thumbnail_url || "/placeholder.svg",
           condition: formatCondition(listing.condition), // Using the helper function to ensure correct type
