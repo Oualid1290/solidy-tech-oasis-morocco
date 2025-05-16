@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
 
 export function RoleDashboard() {
-  const { userProfile, isLoading } = useAuth();
+  const { userProfile, isLoading, user } = useAuth();
   const location = useLocation();
   
   // Show loading spinner while profile is being fetched or created
@@ -15,6 +17,26 @@ export function RoleDashboard() {
       <div className="flex justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+  
+  if (!userProfile && user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Welcome to Gamana</CardTitle>
+          <CardDescription>
+            Your profile is being created. Please wait a moment...
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-4">
+          <p>We're setting up your user profile.</p>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <Button variant="outline" asChild>
+            <Navigate to="/profile" />
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
   

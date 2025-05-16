@@ -56,7 +56,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { language } = useLanguage();
-  const { isAuthenticated, user, signOut } = useAuth();
+  const { isAuthenticated, user, userProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const t = content[language as keyof typeof content];
 
@@ -81,6 +81,8 @@ export function Header() {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const profilePath = userProfile?.username ? `/profile/${userProfile.username}` : '/profile';
 
   return (
     <header className={cn(
@@ -129,7 +131,7 @@ export function Header() {
                 </Link>
               </Button>
               <Button size="sm" className="rounded-full" asChild>
-                <Link to={`/profile/${user?.id}`}>
+                <Link to={profilePath}>
                   <User size={18} className="mr-1" />
                   <span>{t.profile}</span>
                 </Link>
@@ -201,7 +203,7 @@ export function Header() {
                   <Link to="/dashboard" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
                     {t.dashboard}
                   </Link>
-                  <Link to={`/profile/${user?.id}`} className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
+                  <Link to={profilePath} className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>
                     {t.profile}
                   </Link>
                   <button 

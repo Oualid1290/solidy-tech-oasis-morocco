@@ -5,7 +5,7 @@ import NotFound from "@/pages/NotFound";
 import ProductDetail from "@/pages/ProductDetail";
 import PostListing from "@/pages/PostListing";
 import Chat from "@/pages/Chat";
-import Profile from "@/pages/Profile";
+import UserProfile from "@/pages/UserProfile";
 import Auth from "@/pages/Auth";
 import CategoryPage from "@/pages/CategoryPage";
 import SearchResults from "@/pages/SearchResults";
@@ -82,8 +82,13 @@ export const protectedRoutes: RouteConfig[] = [
   // Dashboard routes are defined in dashboardRoutes.tsx
   dashboardRoute,
   {
+    path: "/profile",
+    element: <UserProfile />,
+    requireAuth: true,
+  },
+  {
     path: "/profile/:username",
-    element: <Profile />,
+    element: <UserProfile />,
     requireAuth: true,
   },
   {

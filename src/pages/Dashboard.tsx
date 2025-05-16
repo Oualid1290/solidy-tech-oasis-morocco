@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, userProfile } = useAuth();
   
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -19,6 +19,8 @@ const Dashboard = () => {
   if (!isAuthenticated || !user) {
     return <Navigate to="/auth" />;
   }
+
+  const profilePath = userProfile?.username ? `/profile/${userProfile.username}` : '/profile';
 
   // The user's role-specific dashboard will be handled by the RoleDashboard component
   // Just redirect to the main dashboard path
