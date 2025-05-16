@@ -103,7 +103,7 @@ export function Footer() {
             <ul className="space-y-4">
               <li><Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.home}</Link></li>
               <li><Link to="/products" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.products}</Link></li>
-              <li><Link to="/sell" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.sell}</Link></li>
+              <li><Link to="/post-listing" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.sell}</Link></li>
               <li><Link to="/terms" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.terms}</Link></li>
               <li><Link to="/privacy" className="text-gray-600 dark:text-gray-300 hover:text-solidy-blue dark:hover:text-solidy-blue transition-colors">{t.privacy}</Link></li>
             </ul>

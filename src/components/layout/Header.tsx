@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu, Search, User, ShoppingCart, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -57,6 +57,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const { language } = useLanguage();
   const { isAuthenticated, user, signOut } = useAuth();
+  const navigate = useNavigate();
   const t = content[language as keyof typeof content];
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -98,7 +99,7 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/" className="font-medium hover:text-solidy-blue transition-colors">{t.home}</Link>
-          <Link to="/products/category/all" className="font-medium hover:text-solidy-blue transition-colors">{t.products}</Link>
+          <Link to="/products" className="font-medium hover:text-solidy-blue transition-colors">{t.products}</Link>
           <Link to="/post-listing" className="font-medium hover:text-solidy-blue transition-colors">{t.sell}</Link>
           <Link to="/about" className="font-medium hover:text-solidy-blue transition-colors">{t.about}</Link>
           <Link to="/contact" className="font-medium hover:text-solidy-blue transition-colors">{t.contact}</Link>
@@ -190,7 +191,7 @@ export function Header() {
             
             <nav className="flex flex-col gap-6">
               <Link to="/" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.home}</Link>
-              <Link to="/products/category/all" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.products}</Link>
+              <Link to="/products" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.products}</Link>
               <Link to="/post-listing" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.sell}</Link>
               <Link to="/about" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.about}</Link>
               <Link to="/contact" className="font-medium text-lg" onClick={() => setMobileMenuOpen(false)}>{t.contact}</Link>

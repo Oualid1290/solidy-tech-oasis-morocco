@@ -12,6 +12,10 @@ import SearchResults from "@/pages/SearchResults";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import FAQ from "@/pages/FAQ";
+import Products from "@/pages/Products";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import LocationPage from "@/pages/LocationPage";
 import { dashboardRoute } from "./dashboardRoutes";
 
 interface RouteConfig {
@@ -26,6 +30,10 @@ export const publicRoutes: RouteConfig[] = [
   {
     path: "/",
     element: <Index />,
+  },
+  {
+    path: "/products",
+    element: <Products />,
   },
   {
     path: "/products/:id",
@@ -54,6 +62,18 @@ export const publicRoutes: RouteConfig[] = [
   {
     path: "/auth",
     element: <Auth />,
+  },
+  {
+    path: "/terms",
+    element: <Terms />,
+  },
+  {
+    path: "/privacy",
+    element: <Privacy />,
+  },
+  {
+    path: "/location/:locationSlug",
+    element: <LocationPage />,
   },
 ];
 
