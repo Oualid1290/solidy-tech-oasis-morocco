@@ -6,55 +6,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { type Product } from "@/utils/listingHelpers";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight } from "lucide-react";
-
-// Mock data for products
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    title: "NVIDIA GeForce RTX 3080 Graphics Card",
-    description: "High-end graphics card for gaming and professional work with ray tracing capabilities",
-    price: 8500,
-    imageUrl: "https://images.unsplash.com/photo-1591488320449-011701bb6704?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    condition: "New",
-    location: "Casablanca",
-    sellerRating: 4.8,
-    category: "GPU"
-  },
-  {
-    id: "2",
-    title: "AMD Ryzen 9 5900X Processor",
-    description: "12-core, 24-thread unlocked desktop processor with high performance",
-    price: 4200,
-    imageUrl: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
-    condition: "New",
-    location: "Rabat",
-    sellerRating: 4.6,
-    category: "CPU"
-  },
-  {
-    id: "3",
-    title: "Corsair Vengeance RGB Pro 32GB RAM",
-    description: "High-performance DDR4 memory with dynamic multi-zone RGB lighting",
-    price: 1500,
-    imageUrl: "https://images.unsplash.com/photo-1592664474496-8f3be7f5de23?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
-    condition: "New",
-    location: "Marrakech",
-    sellerRating: 4.9,
-    category: "RAM"
-  },
-  {
-    id: "4",
-    title: "ASUS ROG Strix Z590-E Gaming Motherboard",
-    description: "Premium ATX gaming motherboard with advanced cooling and connectivity options",
-    price: 2800,
-    imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    condition: "Used",
-    location: "Casablanca",
-    sellerRating: 4.7,
-    category: "Motherboard"
-  }
-];
+import { ArrowRight, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const content = {
   en: {
@@ -62,21 +15,24 @@ const content = {
     subtitle: "Explore the latest hardware listings from our verified sellers",
     viewAll: "View All Products",
     sellYour: "Sell Your Hardware",
-    viewDashboard: "View Your Dashboard"
+    viewDashboard: "View Your Dashboard",
+    noProducts: "No products available at the moment. Check back soon!"
   },
   fr: {
     title: "Produits en Vedette",
     subtitle: "Explorez les dernières annonces de matériel de nos vendeurs vérifiés",
     viewAll: "Voir Tous les Produits",
     sellYour: "Vendez Votre Matériel",
-    viewDashboard: "Voir Votre Tableau de Bord"
+    viewDashboard: "Voir Votre Tableau de Bord",
+    noProducts: "Aucun produit disponible pour le moment. Revenez bientôt!"
   },
   ar: {
     title: "المنتجات المميزة",
     subtitle: "استكشف أحدث قوائم الأجهزة من البائعين المعتمدين لدينا",
     viewAll: "عرض جميع المنتجات",
     sellYour: "بيع الأجهزة الخاصة بك",
-    viewDashboard: "عرض لوحة التحكم الخاصة بك"
+    viewDashboard: "عرض لوحة التحكم الخاصة بك",
+    noProducts: "لا توجد منتجات متاحة في الوقت الحالي. تحقق مرة أخرى قريبا!"
   }
 };
 
@@ -89,14 +45,59 @@ export function FeaturedProducts() {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Simulate loading state for 500ms
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setProducts(mockProducts);
-      setIsLoading(false);
-    }, 500);
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch up to 4 most recent active listings
+        const { data: listings, error } = await supabase
+          .from('listings')
+          .select(`
+            id,
+            title,
+            description,
+            price,
+            thumbnail_url,
+            condition,
+            city,
+            user_id,
+            category_id,
+            created_at
+          `)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(4);
+        
+        if (error) {
+          console.error("Error fetching products:", error);
+          throw error;
+        }
+        
+        if (listings && listings.length > 0) {
+          // Transform data to match Product type
+          const productList: Product[] = listings.map(listing => ({
+            id: listing.id,
+            title: listing.title,
+            description: listing.description || "No description available",
+            price: listing.price,
+            imageUrl: listing.thumbnail_url || "/placeholder.svg",
+            condition: listing.condition === 'new' ? 'New' : 'Used',
+            location: listing.city,
+            sellerRating: 0, // This could be fetched from a separate ratings table
+            category: listing.category_id || "Unknown"
+          }));
+          
+          setProducts(productList);
+        } else {
+          setProducts([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    fetchProducts();
   }, []);
   
   return (
@@ -132,27 +133,33 @@ export function FeaturedProducts() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {isLoading ? (
-            // Skeleton loading states
-            Array(4).fill(0).map((_, index) => (
+        {isLoading ? (
+          // Skeleton loading states
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array(4).fill(0).map((_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="bg-gray-200 dark:bg-gray-700 h-48 rounded-lg mb-3"></div>
                 <div className="bg-gray-200 dark:bg-gray-700 h-4 w-2/3 rounded mb-2"></div>
                 <div className="bg-gray-200 dark:bg-gray-700 h-4 w-1/3 rounded mb-2"></div>
                 <div className="bg-gray-200 dark:bg-gray-700 h-4 w-1/2 rounded"></div>
               </div>
-            ))
-          ) : (
-            products.map((product) => (
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
               <div key={product.id} className="animate-scale-in">
                 <Link to={`/products/${product.id}`} className="block h-full transition-transform hover:-translate-y-1 duration-200">
                   <ProductCard product={product} />
                 </Link>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-lg text-gray-500 dark:text-gray-400">{t.noProducts}</p>
+          </div>
+        )}
         
         {isAuthenticated && (
           <div className="mt-12 text-center">
