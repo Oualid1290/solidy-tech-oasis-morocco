@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -81,6 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             userData.email?.split('@')[0] || 
                             `user_${Math.floor(Math.random() * 100000)}`;
             
+            // Create a new profile with data from auth
             const newProfile = {
               id: userId,
               username: username,
@@ -100,6 +102,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               console.error("Error creating user profile:", createError);
               return null;
             }
+            
+            toast({
+              title: "Profile created",
+              description: "Your user profile has been automatically created."
+            });
             
             return createdProfile as UserProfile;
           }
@@ -291,20 +298,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           ip_address: null // We can't get the IP from the client
         });
         
-      // Create a user profile entry
-      const newProfile = {
-        id: signUpData.user.id,
-        username: signUpData.user.user_metadata.username || `user_${Math.floor(Math.random() * 100000)}`,
-        role: 'buyer' as UserRole,
-        is_verified: false,
-        last_seen: new Date().toISOString()
-      };
-      
-      await supabase
-        .from("users")
-        .insert(newProfile)
-        .select()
-        .single();
+      // Profile will be created automatically by the fetchUserProfile function
+      // when the auth state changes and triggers the onAuthStateChange event
     }
   };
 
@@ -393,30 +388,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      // Ensure the user profile exists
-      if (data?.user) {
-        const profile = await fetchUserProfile(data.user.id);
-        if (!profile) {
-          // Profile doesn't exist, create one
-          const newProfile = {
-            id: data.user.id,
-            username: data.user.email?.split('@')[0] || `user_${Math.floor(Math.random() * 100000)}`,
-            email: data.user.email,
-            role: (data.user.user_metadata?.role as UserRole) || 'buyer',
-            is_verified: !!data.user.email_confirmed_at,
-            last_seen: new Date().toISOString()
-          };
-          
-          const { error: createError } = await supabase
-            .from("users")
-            .insert(newProfile);
-            
-          if (createError) {
-            console.error("Error creating user profile during sign in:", createError);
-          }
-        }
-      }
-      
+      // Profile will be created automatically by the fetchUserProfile function if needed
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in.",
@@ -470,26 +442,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      // Create user profile - even if email confirmation is pending
-      if (data?.user) {
-        const newProfile = {
-          id: data.user.id,
-          username,
-          email,
-          role,
-          is_verified: false,
-          last_seen: new Date().toISOString()
-        };
-        
-        const { error: profileError } = await supabase
-          .from("users")
-          .insert(newProfile);
-          
-        if (profileError) {
-          console.error("Error creating profile during signup:", profileError);
-        }
-      }
-      
+      // Profile will be created automatically by the fetchUserProfile function
       toast({
         title: "Account created",
         description: "Please check your email to verify your account.",

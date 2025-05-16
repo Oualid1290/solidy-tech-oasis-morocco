@@ -1,11 +1,22 @@
+
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 
 export function RoleDashboard() {
-  const { userProfile } = useAuth();
+  const { userProfile, isLoading } = useAuth();
   const location = useLocation();
+  
+  // Show loading spinner while profile is being fetched or created
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   if (!userProfile) {
     toast({

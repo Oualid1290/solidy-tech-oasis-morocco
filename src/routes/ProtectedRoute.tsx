@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, userProfile } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking authentication
@@ -20,12 +20,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
   
-  // Redirect to login if not authenticated or no user profile
-  if (!isAuthenticated || !userProfile) {
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user) {
     // Preserve the intended destination for redirect after login
     return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
-  // Render children if authenticated and user profile exists
+  // Render children if authenticated
   return <>{children}</>;
 };

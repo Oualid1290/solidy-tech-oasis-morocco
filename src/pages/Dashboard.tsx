@@ -1,11 +1,10 @@
 
 import { useAuth } from "@/context/AuthContext";
-import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const { isAuthenticated, isLoading, userProfile } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -17,18 +16,13 @@ const Dashboard = () => {
   }
 
   // If not authenticated, redirect to auth page
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
-  }
-  
-  // If no user profile, redirect to auth page
-  if (!userProfile) {
-    console.log("No user profile found, redirecting to auth page");
+  if (!isAuthenticated || !user) {
     return <Navigate to="/auth" />;
   }
 
-  // The user's role-specific dashboard will be automatically loaded by the RoleDashboard component
-  return <RoleDashboard />;
+  // The user's role-specific dashboard will be handled by the RoleDashboard component
+  // Just redirect to the main dashboard path
+  return <Navigate to="/dashboard" />;
 };
 
 export default Dashboard;
