@@ -21,6 +21,7 @@ export const normalizeCondition = (condition: "New" | "Used"): "new" | "used" =>
 export interface Product {
   id: string;
   title: string;
+  description: string;
   price: number;
   imageUrl: string;
   condition: "New" | "Used";
